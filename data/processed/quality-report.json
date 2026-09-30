@@ -1,0 +1,19 @@
+{
+  "status": "pass",
+  "generatedAt": "2026-09-30T00:00:00+00:00",
+  "counts": {
+    "blocks": 3,
+    "wells": 40,
+    "productionRows": 1920
+  },
+  "coverage": {
+    "firstMonth": "2018-01-01",
+    "lastMonth": "2026-09-01"
+  },
+  "checks": {
+    "uniqueWellIds": true,
+    "validCoordinates": true,
+    "allWellsJoinedToBlock": true
+  },
+  "issues": []
+}

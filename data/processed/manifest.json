@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "pipelineVersion": "0.1.0",
+  "generatedAt": "2026-09-30T00:00:00+00:00",
+  "mode": "demo",
+  "sources": [
+    {
+      "title": "Dataset sintético del repositorio",
+      "url": null,
+      "generatedBy": "pipeline/build_data.py --demo",
+      "seed": 20260930
+    }
+  ],
+  "outputs": [
+    {
+      "path": "public/data/dataset.json",
+      "bytes": 188597,
+      "sha256": "ec7a036059ee910ff577eab0b05f7f0583b76a31f0c743745396b6ec45899764"
+    },
+    {
+      "path": "data/processed/wells.csv",
+      "bytes": 9275,
+      "sha256": "e4c4c95a072684281bbc8951b49df84d5487aa473d4a2a00156dedee2220b7c5"
+    }
+  ],
+  "assumptions": [
+    "Cuenca Austral se identifica por el campo cuenca; Santa Cruz y Tierra del Fuego son fallback explícito.",
+    "coordenadax/coordenaday se prueban en ambos órdenes contra límites geográficos argentinos.",
+    "gas está expresado en miles de m3 mensuales; la tasa usa días productivos cuando se informan.",
+    "geometrías operativas sin polígono oficial se marcan como envolventes derivadas de pozos."
+  ]
+}
