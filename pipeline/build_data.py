@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import html
 import io
 import json
 import math
@@ -20,6 +21,7 @@ import shutil
 import sys
 import unicodedata
 import urllib.request
+import urllib.parse
 import zipfile
 from collections import defaultdict
 from datetime import UTC, date, datetime
@@ -93,14 +95,19 @@ def resolve_catalog(config: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
         dataset_id = spec["dataset_id"]
         if dataset_id not in payloads:
             catalog_path = RAW_DIR / f"catalog-{slug(dataset_id)}.json"
-            fetch(config["ckan_api"].format(dataset_id=dataset_id), catalog_path)
-            payloads[dataset_id] = json.loads(catalog_path.read_text(encoding="utf-8"))
+            try:
+                fetch(config["ckan_api"].format(dataset_id=dataset_id), catalog_path)
+                payloads[dataset_id] = json.loads(catalog_path.read_text(encoding="utf-8"))
+            except Exception:
+                payloads[dataset_id] = {}
         result = payloads[dataset_id].get("result") or payloads[dataset_id]
         for item in result.get("resources", []):
             title = first_text(item, "name", "title", "description")
             url = first_text(item, "url", "download_url")
             if title and url and any(canonical(pattern) in canonical(title) for pattern in spec["resource_patterns"]):
                 found[kind].append({"title": title, "url": url, "format": first_text(item, "format")})
+        if not found[kind]:
+            found[kind].extend(resolve_landing_page(kind, spec))
 
     for kind in config["datasets"]:
         unique = {item["url"]: item for item in found[kind]}
@@ -108,6 +115,29 @@ def resolve_catalog(config: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
         if not found[kind]:
             raise RuntimeError(f"El catálogo no devolvió recursos para {kind}; revise config/sources.json")
     return found
+
+
+def resolve_landing_page(kind: str, spec: dict[str, Any]) -> list[dict[str, str]]:
+    """Fallback for periods where the documented CKAN endpoint is unavailable."""
+    target = RAW_DIR / f"landing-{kind}.html"
+    fetch(spec["landing_page"], target)
+    content = html.unescape(target.read_text(encoding="utf-8", errors="replace"))
+    urls = [urllib.parse.urljoin(spec["landing_page"], value) for value in re.findall(r'href=["\']([^"\']+)["\']', content, re.IGNORECASE)]
+    candidates = []
+    for url in urls:
+        normalized = canonical(urllib.parse.unquote(url))
+        if "/download/" not in normalized:
+            continue
+        if kind == "production" and not ("produccion" in normalized and re.search(r"20\d{2}", normalized)):
+            continue
+        if kind == "wells" and not ("pozos" in normalized or "shapefile" in normalized):
+            continue
+        if kind == "concessions" and "concesion" not in normalized:
+            continue
+        if kind == "basin" and "cuenca" not in normalized:
+            continue
+        candidates.append({"title": Path(urllib.parse.urlparse(url).path).name, "url": url, "format": Path(url).suffix.lstrip(".")})
+    return list({item["url"]: item for item in candidates}.values())
 
 
 def detect_encoding(raw: bytes) -> str:

@@ -3,25 +3,25 @@
   "datasets": {
     "production": {
       "dataset_id": "energia-demo-produccion-petroleo-gas-por-pozo-capitulo-iv",
-      "landing_page": "https://datos.gob.ar/dataset/energia-produccion-petroleo-gas-por-pozo-capitulo-iv",
+      "landing_page": "https://www.datos.gob.ar/ar/dataset/energia-produccion-petroleo-gas-por-pozo-capitulo-iv",
       "title_contains": "Producción de petróleo y gas por pozo",
       "resource_patterns": ["DDJJ abiertas y cerradas", "Detalle mensual de producción por año"]
     },
     "wells": {
       "dataset_id": "energia-demo-produccion-petroleo-gas-por-pozo-capitulo-iv",
-      "landing_page": "https://datos.gob.ar/dataset/energia-produccion-petroleo-gas-por-pozo-capitulo-iv",
+      "landing_page": "https://www.datos.gob.ar/ar/dataset/energia-produccion-petroleo-gas-por-pozo-capitulo-iv",
       "title_contains": "Producción de petróleo y gas por pozo",
       "resource_patterns": ["Capítulo IV - Pozos", "Shapefile de Pozos"]
     },
     "concessions": {
       "dataset_id": "energia-demo-produccion-hidrocarburos---concesiones-explotacion",
-      "landing_page": "https://datos.gob.ar/dataset/energia-produccion-hidrocarburos---concesiones-explotacion",
+      "landing_page": "https://www.datos.gob.ar/ar/dataset/energia-produccion-hidrocarburos---concesiones-explotacion",
       "title_contains": "Concesiones de Explotación",
       "resource_patterns": ["Concesiones de Explotación"]
     },
     "basin": {
       "dataset_id": "energia-demo-exploracion-hidrocarburos-cuencas-sedimentarias",
-      "landing_page": "https://datos.gob.ar/dataset/energia-exploracion-hidrocarburos-cuencas-sedimentarias",
+      "landing_page": "https://www.datos.gob.ar/ar/dataset/energia-exploracion-hidrocarburos-cuencas-sedimentarias",
       "title_contains": "Cuencas Sedimentarias",
       "resource_patterns": ["Cuencas Sedimentarias"]
     }
