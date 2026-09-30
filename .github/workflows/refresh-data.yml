@@ -1,0 +1,40 @@
+name: Actualizar datos oficiales
+
+on:
+  schedule:
+    - cron: '17 9 3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python pipeline/build_data.py
+      - run: python -m unittest pipeline.test_pipeline
+      - name: Crear PR si hay cambios
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet; then
+            echo "No hay cambios en los datos"
+            exit 0
+          fi
+          branch="data/refresh-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add data/processed public/data
+          git commit -m "data: actualizar fuentes oficiales"
+          git push origin "$branch"
+          gh pr create --title "data: actualización mensual" --body "Actualización automática. Revisar manifest y reporte de calidad antes de integrar." --base main --head "$branch"
+
