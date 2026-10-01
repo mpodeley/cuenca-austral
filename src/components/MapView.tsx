@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { Map, MapLayerMouseEvent } from 'maplibre-gl'
 import { blockFeatureCollection, wellFeatureCollection } from '../data'
@@ -33,6 +33,12 @@ export function MapView({ dataset, selectedBlockId, showBlocks, showWells, onSel
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<Map | null>(null)
   const selectRef = useRef(onSelectBlock)
+  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const bounds = useMemo(() => {
+    const result = new maplibregl.LngLatBounds()
+    dataset.wells.forEach((well) => result.extend([well.longitude, well.latitude]))
+    return result
+  }, [dataset])
   selectRef.current = onSelectBlock
 
   useEffect(() => {
@@ -46,12 +52,9 @@ export function MapView({ dataset, selectedBlockId, showBlocks, showWells, onSel
       maxZoom: 13,
     })
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
-    map.on('load', () => {
-      map.addSource('basin', { type: 'geojson', data: dataset.basin })
-      map.addLayer({
-        id: 'basin-line', type: 'line', source: 'basin',
-        paint: { 'line-color': '#5ce1e6', 'line-opacity': 0.45, 'line-width': 1.2, 'line-dasharray': [3, 2] },
-      })
+    // `load` espera también mosaicos remotos. `style.load` permite mostrar los
+    // datos oficiales aunque OpenStreetMap esté lento o bloqueado.
+    map.once('style.load', () => {
       map.addSource('blocks', { type: 'geojson', data: blockFeatureCollection(dataset) })
       map.addLayer({
         id: 'blocks-fill', type: 'fill', source: 'blocks',
@@ -76,7 +79,12 @@ export function MapView({ dataset, selectedBlockId, showBlocks, showWells, onSel
       })
       map.addLayer({
         id: 'wells-point', type: 'circle', source: 'wells', filter: ['!', ['has', 'point_count']],
-        paint: { 'circle-color': '#f7f9fa', 'circle-radius': 3, 'circle-stroke-color': '#071217', 'circle-stroke-width': 1 },
+        paint: { 'circle-color': '#ffffff', 'circle-radius': 4, 'circle-stroke-color': '#071217', 'circle-stroke-width': 1.2 },
+      })
+      map.addSource('basin', { type: 'geojson', data: dataset.basin })
+      map.addLayer({
+        id: 'basin-line', type: 'line', source: 'basin',
+        paint: { 'line-color': '#5ce1e6', 'line-opacity': 0.45, 'line-width': 1.2, 'line-dasharray': [3, 2] },
       })
 
       map.on('click', 'blocks-fill', (event: MapLayerMouseEvent) => {
@@ -85,10 +93,23 @@ export function MapView({ dataset, selectedBlockId, showBlocks, showWells, onSel
       })
       map.on('mouseenter', 'blocks-fill', () => { map.getCanvas().style.cursor = 'pointer' })
       map.on('mouseleave', 'blocks-fill', () => { map.getCanvas().style.cursor = '' })
+      map.on('click', 'wells-point', (event: MapLayerMouseEvent) => {
+        const blockId = event.features?.[0]?.properties?.blockId
+        if (blockId) selectRef.current(blockId)
+      })
+      if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 70, maxZoom: 7, duration: 0 })
+      setMapStatus('ready')
+    })
+    map.on('error', (event) => {
+      // Los errores de mosaicos del mapa base no deben ocultar las capas propias.
+      if (!map.getSource('blocks')) {
+        console.error('No se pudieron inicializar las capas del mapa', event.error)
+        setMapStatus('error')
+      }
     })
     mapRef.current = map
     return () => { map.remove(); mapRef.current = null }
-  }, [dataset])
+  }, [bounds, dataset])
 
   useEffect(() => {
     const map = mapRef.current
@@ -109,5 +130,12 @@ export function MapView({ dataset, selectedBlockId, showBlocks, showWells, onSel
     ])
   }, [selectedBlockId])
 
-  return <div ref={container} className="map" aria-label="Mapa de concesiones y pozos de la Cuenca Austral" />
+  return <>
+    <div ref={container} className="map" aria-label="Mapa de concesiones y pozos de la Cuenca Austral" />
+    <div className={`map-status ${mapStatus}`} role="status">
+      {mapStatus === 'loading' && 'Preparando capas…'}
+      {mapStatus === 'ready' && `${dataset.blocks.length} concesiones · ${dataset.wells.length.toLocaleString('es-AR')} pozos`}
+      {mapStatus === 'error' && 'No se pudieron dibujar las capas. Recargá la página.'}
+    </div>
+  </>
 }
