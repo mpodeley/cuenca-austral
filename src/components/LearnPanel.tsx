@@ -13,8 +13,14 @@ export function LearnPanel({ dataset, onClose }: { dataset: Dataset; onClose: ()
 
       <div className="learn-status">
         <span className={`status-dot ${dataset.metadata.mode}`} />
-        <div><strong>{dataset.metadata.mode === 'official' ? 'Datos oficiales procesados' : 'Modo demostración'}</strong><p>{dataset.metadata.disclaimer}</p></div>
+        <div><strong>{dataset.metadata.mode === 'official' ? `${dataset.blocks.length} áreas y ${dataset.wells.length.toLocaleString('es-AR')} pozos oficiales` : 'Modo demostración'}</strong><p>{dataset.metadata.disclaimer}</p></div>
       </div>
+
+      <section className="plain-language">
+        <h3>Cobertura publicada</h3>
+        <p>{dataset.metadata.webHistoryPolicy}</p>
+        <p><strong>Trayectorias:</strong> {dataset.metadata.trajectoryCoverage}</p>
+      </section>
 
       <section className="journey">
         <h3>Del pedido a una aplicación</h3>

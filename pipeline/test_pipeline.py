@@ -25,13 +25,23 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(len(blocks), 3)
 
     def test_demo_output_is_reproducible(self):
-        subprocess.run([sys.executable, "pipeline/build_data.py", "--demo"], cwd=ROOT, check=True, capture_output=True)
-        first = (ROOT / "public/data/dataset.json").read_bytes()
-        subprocess.run([sys.executable, "pipeline/build_data.py", "--demo"], cwd=ROOT, check=True, capture_output=True)
-        self.assertEqual(first, (ROOT / "public/data/dataset.json").read_bytes())
-        self.assertEqual(json.loads(first)["metadata"]["mode"], "demo")
+        outputs = [
+            ROOT / "public/data/dataset.json", ROOT / "data/processed/manifest.json",
+            ROOT / "data/processed/quality-report.json", ROOT / "data/processed/quality-report.md",
+            ROOT / "data/processed/wells.csv",
+        ]
+        originals = {path: path.read_bytes() if path.exists() else None for path in outputs}
+        try:
+            subprocess.run([sys.executable, "pipeline/build_data.py", "--demo"], cwd=ROOT, check=True, capture_output=True)
+            first = (ROOT / "public/data/dataset.json").read_bytes()
+            subprocess.run([sys.executable, "pipeline/build_data.py", "--demo"], cwd=ROOT, check=True, capture_output=True)
+            self.assertEqual(first, (ROOT / "public/data/dataset.json").read_bytes())
+            self.assertEqual(json.loads(first)["metadata"]["mode"], "demo")
+        finally:
+            for path, content in originals.items():
+                if content is not None:
+                    path.write_bytes(content)
 
 
 if __name__ == "__main__":
     unittest.main()
-

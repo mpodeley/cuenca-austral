@@ -8,9 +8,9 @@ Si no programás, empezá por [COURSE.md](COURSE.md): explica cómo se dirigió 
 
 ## Estado
 
-La interfaz completa funciona con un dataset sintético determinístico claramente identificado como demostrativo. El pipeline oficial está preparado para resolver los recursos del catálogo de Datos Argentina, descargar las distribuciones vigentes y sustituir ese dataset mediante `npm run data:update`.
+La versión publicada usa datos oficiales procesados: **65 áreas, 3.236 pozos y 487.813 registros mensuales**, con corte en julio de 2026. El control de calidad y la cobertura exacta están en [`data/processed/quality-report.md`](data/processed/quality-report.md).
 
-La separación es intencional: nunca se presenta un dato inventado como oficial y la interfaz se puede desarrollar aun cuando el portal público no está disponible.
+Para que GitHub Pages cargue con agilidad, el JSON web conserva los últimos 60 registros de cada pozo; los acumulados de las fichas se calculan con todo el histórico descargado (2006–2026). El modo sintético continúa disponible sólo para desarrollar y enseñar fallas de fuentes, siempre rotulado como demostrativo.
 
 ## Inicio rápido
 
@@ -40,6 +40,7 @@ El comando falla de manera explícita si cambia el catálogo, falta un campo cr�
 - [Concesiones de explotación](https://datos.gob.ar/dataset/energia-produccion-hidrocarburos---concesiones-explotacion)
 - [Cuencas sedimentarias](https://datos.gob.ar/dataset/energia-exploracion-hidrocarburos-cuencas-sedimentarias)
 - [Información geográfica de la Secretaría de Energía](https://www.argentina.gob.ar/economia/energia/planeamiento-energetico/informacion-energetica/sistema-unificado-de-informacion-2)
+- [Trayectorias de pozos (publicación histórica)](https://datos.gob.ar/dataset/energia-produccion-hidrocarburos---trayectorias-pozos)
 
 Las declaraciones de producción pueden ser provisorias. El código tiene licencia MIT; los datos conservan las condiciones y atribución de sus organismos publicadores. Véase [DATA.md](DATA.md).
 
@@ -55,6 +56,8 @@ Las declaraciones de producción pueden ser provisorias. El código tiene licenc
 | `data/processed/quality-report.*` | Conteos, cobertura y controles de calidad |
 
 Los identificadores internos son hashes determinísticos de los identificadores oficiales. Las coordenadas se validan contra límites argentinos y quedan en EPSG:4326. Cuando una geometría oficial no puede cruzarse, el pipeline usa una envolvente derivada de los pozos y lo registra como supuesto.
+
+La capa de trayectorias se publica vacía de forma deliberada: el recurso nacional histórico dejó de responder y el dataset vigente encontrado cubre Vaca Muerta, no Austral. Se muestra esta ausencia en la aplicación en vez de dibujar trayectorias ficticias.
 
 ## Metodología de pronóstico
 

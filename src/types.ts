@@ -36,6 +36,7 @@ export type Block = {
   lastProduction: string | null
   cumulativeGasMm3: number
   latestGasMm3: number
+  geometrySource: 'official-concession' | 'derived-well-envelope'
   geometry: Polygon | MultiPolygon
 }
 
@@ -45,8 +46,11 @@ export type Dataset = {
     dataThrough: string
     mode: 'official' | 'demo'
     disclaimer: string
+    webHistoryPolicy: string
+    trajectoryCoverage: string
   }
   basin: FeatureCollection
+  trajectories: FeatureCollection
   blocks: Block[]
   wells: Well[]
 }
@@ -66,4 +70,3 @@ export type ForecastPoint = {
   high: number
 }
 import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson'
-

@@ -105,7 +105,13 @@ def resolve_catalog(config: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
             title = first_text(item, "name", "title", "description")
             url = first_text(item, "url", "download_url")
             if title and url and any(canonical(pattern) in canonical(title) for pattern in spec["resource_patterns"]):
-                found[kind].append({"title": title, "url": url, "format": first_text(item, "format")})
+                found[kind].append({
+                    "title": title, "url": url, "format": first_text(item, "format"),
+                    "id": str(item.get("id") or ""),
+                    "datastore_active": bool(item.get("datastore_active")),
+                    "last_modified": str(item.get("last_modified") or ""),
+                    "description": str(item.get("description") or ""),
+                })
         if not found[kind]:
             found[kind].extend(resolve_landing_page(kind, spec))
 
@@ -162,6 +168,12 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 
 def pick(row: dict[str, Any], *candidates: str) -> Any:
+    # CKAN conserva los nombres de campo conocidos. Evitar normalizar todas las
+    # claves en cada lectura reduce drásticamente el costo sobre cientos de miles de filas.
+    for candidate in candidates:
+        value = row.get(candidate)
+        if value not in (None, ""):
+            return value
     lookup = {canonical(key).replace("_", "").replace(" ", ""): value for key, value in row.items()}
     for candidate in candidates:
         key = canonical(candidate).replace("_", "").replace(" ", "")
@@ -190,6 +202,16 @@ def is_austral(row: dict[str, Any]) -> bool:
 
 
 def normalize_coordinates(row: dict[str, Any]) -> tuple[float, float] | None:
+    raw_geojson = pick(row, "geojson", "geometry")
+    if raw_geojson:
+        try:
+            geometry = json.loads(raw_geojson) if isinstance(raw_geojson, str) else raw_geojson
+            if geometry.get("type") == "Point":
+                longitude, latitude = geometry["coordinates"][:2]
+                if -76 <= longitude <= -52 and -58.5 <= latitude <= -20:
+                    return round(float(longitude), 6), round(float(latitude), 6)
+        except (ValueError, TypeError, KeyError, json.JSONDecodeError):
+            pass
     x = number(pick(row, "coordenadax", "coord_x", "x", "latitud", "latitude"), 999)
     y = number(pick(row, "coordenaday", "coord_y", "y", "longitud", "longitude"), 999)
     pairs = [(y, x), (x, y)]
@@ -209,30 +231,45 @@ def month_string(row: dict[str, Any]) -> str | None:
     return f"{match.group(1)}-{int(match.group(2)):02d}-01" if match else None
 
 
-def normalize_production(rows: Iterable[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def normalize_production(
+    rows: Iterable[dict[str, Any]], catalog_rows: Iterable[dict[str, Any]] = ()
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     wells: dict[str, dict[str, Any]] = {}
     production: dict[tuple[str, str], dict[str, Any]] = {}
+    catalog: dict[str, dict[str, Any]] = {}
+    for catalog_row in catalog_rows:
+        raw_id = str(pick(catalog_row, "idpozo", "id_pozo") or "")
+        coordinates = normalize_coordinates(catalog_row)
+        if raw_id and coordinates and is_austral(catalog_row):
+            catalog[raw_id] = catalog_row
     for row in rows:
         if not is_austral(row):
             continue
-        coordinates = normalize_coordinates(row)
+        raw_well_id = str(pick(row, "idpozo", "id_pozo") or "")
+        detail = catalog.get(raw_well_id, row)
+        coordinates = normalize_coordinates(detail)
         if not coordinates:
             continue
-        name = str(pick(row, "sigla", "pozo", "well", "nombrepozo") or "Pozo sin sigla").strip()
-        raw_well_id = str(pick(row, "idpozo", "id_pozo") or name)
+        name = str(pick(detail, "sigla", "pozo", "well", "nombrepozo") or pick(row, "sigla") or "Pozo sin sigla").strip()
+        raw_well_id = raw_well_id or name
         well_id = stable_id("well", raw_well_id)
         block = str(pick(row, "areapermisoconcesion", "concesion", "area", "bloque") or "Área sin identificar").strip()
         block_id = stable_id("block", block)
         month = month_string(row)
+        province = str(pick(row, "provincia") or "Sin informar").strip()
+        offshore = canonical(province) == "estado nacional" or "marina" in canonical(block)
         wells[well_id] = {
             "id": well_id, "name": name, "blockId": block_id, "block": block,
             "operator": str(pick(row, "empresa", "operador", "company") or "Sin informar").strip(),
-            "province": str(pick(row, "provincia") or "Sin informar").strip(),
-            "status": str(pick(row, "tipoestado", "estado") or "Sin informar").strip(),
-            "environment": "offshore" if "offshore" in canonical(row) or "costa afuera" in canonical(row) else "onshore",
+            "province": province,
+            "status": str(pick(detail, "tipoestado", "estado") or pick(row, "tipoestado") or "Sin informar").strip(),
+            "environment": "offshore" if offshore or any(
+                marker in canonical(pick(detail, "tipo", "subtipo", "clasificacion", "observaciones"))
+                for marker in ("offshore", "costa afuera")
+            ) else "onshore",
             "longitude": coordinates[0], "latitude": coordinates[1],
             "firstProduction": None, "lastProduction": None,
-            "formation": pick(row, "formacion", "formprod", "formacionproductiva"),
+            "formation": pick(detail, "formacion", "formprod", "formacionproductiva") or pick(row, "formacion", "formprod"),
             "production": [],
         }
         if not month:
@@ -272,15 +309,17 @@ def build_blocks(wells: list[dict[str, Any]], supplied_geometries: dict[str, dic
         points = [point for well in members for point in well["production"]]
         dates = sorted(point["month"] for point in points)
         latest = dates[-1] if dates else None
+        official_geometry = (supplied_geometries or {}).get(canonical(members[0]["block"]))
         blocks.append({
             "id": block_id, "name": members[0]["block"], "operator": members[0]["operator"],
             "province": members[0]["province"], "environment": members[0]["environment"], "areaKm2": None,
             "wellCount": len(members),
-            "activeWellCount": sum(1 for well in members if canonical(well["status"]) in {"en produccion", "produccion", "activo"}),
+            "activeWellCount": sum(1 for well in members if canonical(well["status"]) in {"en produccion", "produccion", "activo", "extraccion efectiva"}),
             "firstProduction": dates[0] if dates else None, "lastProduction": latest,
             "cumulativeGasMm3": round(sum(point["gasMm3"] for point in points), 2),
             "latestGasMm3": round(sum(point["gasMm3"] for point in points if point["month"] == latest), 2) if latest else 0,
-            "geometry": (supplied_geometries or {}).get(canonical(members[0]["block"])) or bbox_polygon(members),
+            "geometrySource": "official-concession" if official_geometry else "derived-well-envelope",
+            "geometry": official_geometry or bbox_polygon(members),
         })
     return sorted(blocks, key=lambda block: block["name"])
 
@@ -290,6 +329,19 @@ def load_geographic_resource(path: Path) -> list[dict[str, Any]]:
     if path.suffix.lower() in {".json", ".geojson"}:
         payload = json.loads(path.read_text(encoding="utf-8"))
         return list(payload.get("features", []))
+    if path.suffix.lower() == ".csv" or (not zipfile.is_zipfile(path) and path.suffix.lower() == ".bin"):
+        features = []
+        for row in read_csv(path):
+            raw_geometry = pick(row, "geojson", "geometry")
+            if not raw_geometry:
+                continue
+            try:
+                geometry = json.loads(raw_geometry) if isinstance(raw_geometry, str) else raw_geometry
+            except json.JSONDecodeError:
+                continue
+            features.append({"type": "Feature", "properties": row, "geometry": geometry})
+        if features:
+            return features
     shape_path = path
     if zipfile.is_zipfile(path):
         extract_dir = RAW_DIR / f"{path.stem}-extracted"
@@ -316,7 +368,7 @@ def download_geography(items: list[dict[str, str]], kind: str, manifest: list[di
     errors = []
     for index, item in enumerate(items):
         url = item["url"].replace("http://", "https://")
-        suffix = Path(url.split("?")[0]).suffix.lower()
+        suffix = ".csv" if canonical(item.get("format")) == "csv" else Path(url.split("?")[0]).suffix.lower()
         target = RAW_DIR / f"{kind}-{index:02d}{suffix if suffix in {'.zip', '.shp', '.json', '.geojson'} else '.bin'}"
         try:
             source = fetch(url, target)
@@ -328,6 +380,62 @@ def download_geography(items: list[dict[str, str]], kind: str, manifest: list[di
     raise RuntimeError(f"No se pudo leer geografía {kind}: {'; '.join(errors)}")
 
 
+def datastore_rows(
+    config: dict[str, Any], resource: dict[str, Any], kind: str, manifest: list[dict[str, Any]],
+    filters: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Fetch only the requested basin from CKAN instead of multi-hundred-MB national CSVs."""
+    rows: list[dict[str, Any]] = []
+    limit = 32000
+    offset = 0
+    page = 0
+    while True:
+        params = {"resource_id": resource["id"], "limit": limit, "offset": offset}
+        if filters:
+            params["filters"] = json.dumps(filters, ensure_ascii=False)
+        url = f"{config['datastore_api']}?{urllib.parse.urlencode(params)}"
+        target = RAW_DIR / f"{kind}-{resource['id']}-page-{page:03d}.json"
+        if target.exists() and target.stat().st_size:
+            source = {"url": url, "path": str(target.relative_to(ROOT)), "bytes": target.stat().st_size, "sha256": sha256(target), "cache": "reused"}
+        else:
+            source = fetch(url, target)
+        source.update({"title": resource["title"], "resourceId": resource["id"], "filters": filters or {}})
+        manifest.append(source)
+        payload = json.loads(target.read_text(encoding="utf-8"))
+        if not payload.get("success"):
+            raise RuntimeError(f"CKAN rechazó la consulta a {resource['title']}")
+        records = payload["result"].get("records", [])
+        rows.extend(records)
+        if len(records) < limit:
+            break
+        offset += limit
+        page += 1
+    return rows
+
+
+def annual_production_resources(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_year: dict[int, dict[str, Any]] = {}
+    for item in items:
+        match = re.search(r"\b(20\d{2})\b", item["title"])
+        if not match or not item.get("datastore_active") or "no convencional" in canonical(item["title"]):
+            continue
+        year = int(match.group(1))
+        current = by_year.get(year)
+        score = (
+            "ddjj" not in canonical(item["title"]),
+            "identificador" in canonical(item.get("description", "")),
+            item.get("last_modified", ""),
+        )
+        current_score = (
+            "ddjj" not in canonical(current["title"]),
+            "identificador" in canonical(current.get("description", "")),
+            current.get("last_modified", ""),
+        ) if current else (False, False, "")
+        if current is None or score > current_score:
+            by_year[year] = item
+    return [by_year[year] for year in sorted(by_year)]
+
+
 def official_geometries(
     resources: dict[str, list[dict[str, str]]], manifest: list[dict[str, Any]]
 ) -> tuple[dict[str, dict[str, Any]], dict[str, Any] | None]:
@@ -336,7 +444,7 @@ def official_geometries(
     try:
         for feature in download_geography(resources["concessions"], "concessions", manifest):
             properties = feature.get("properties") or {}
-            name = pick(properties, "areapermisoconcesion", "concesion", "area", "nombre", "nom_area")
+            name = pick(properties, "areapermisoconcesion", "concesion", "area", "nombre", "nom_area", "nombre_de_", "nombre_de_area")
             basin = canonical(pick(properties, "cuenca", "nom_cuenca"))
             if name and ("austral" in basin or not basin):
                 block_geometries[canonical(name)] = feature["geometry"]
@@ -389,18 +497,26 @@ def download_official(config: dict[str, Any]) -> tuple[list[dict[str, Any]], lis
     resources = resolve_catalog(config)
     manifest_sources: list[dict[str, Any]] = []
     all_rows: list[dict[str, Any]] = []
-    production_resources = [item for item in resources["production"] if re.search(r"20\d{2}", item["title"])]
+    production_resources = annual_production_resources(resources["production"])
     if not production_resources:
-        production_resources = resources["production"]
-    for index, item in enumerate(production_resources):
-        suffix = Path(item["url"].split("?")[0]).suffix or ".csv"
-        target = RAW_DIR / f"production-{index:03d}{suffix}"
-        source = fetch(item["url"].replace("http://", "https://"), target)
-        source["title"] = item["title"]
-        manifest_sources.append(source)
-        if target.suffix.lower() == ".csv":
-            all_rows.extend(read_csv(target))
-    wells, _ = normalize_production(all_rows)
+        raise RuntimeError("No se encontraron distribuciones anuales de producción en el catálogo")
+    skipped_resources = 0
+    for item in production_resources:
+        try:
+            all_rows.extend(datastore_rows(config, item, "production", manifest_sources, {"cuenca": "AUSTRAL"}))
+        except Exception as error:
+            skipped_resources += 1
+            manifest_sources.append({
+                "title": item["title"], "url": item["url"], "resourceId": item["id"],
+                "status": "skipped", "reason": f"El DataStore publicado no está accesible: {error}",
+            })
+    if skipped_resources == len(production_resources):
+        raise RuntimeError("Ninguna distribución anual de producción publicada respondió desde CKAN")
+    well_resource = next((item for item in resources["wells"] if item.get("datastore_active") and "capitulo iv" in canonical(item["title"])), None)
+    if not well_resource:
+        raise RuntimeError("No se encontró el padrón geográfico de pozos en CKAN")
+    catalog_rows = datastore_rows(config, well_resource, "wells", manifest_sources, {"cuenca": "AUSTRAL"})
+    wells, _ = normalize_production(all_rows, catalog_rows)
     if not wells:
         raise RuntimeError("Los recursos se descargaron, pero ningún registro válido coincidió con la Cuenca Austral")
     geometries, basin_feature = official_geometries(resources, manifest_sources)
@@ -440,14 +556,27 @@ def write_outputs(mode: str, wells: list[dict[str, Any]], blocks: list[dict[str,
     disclaimer = ("Datos procesados desde publicaciones oficiales; pueden ser provisorios y declarados por operadores."
                   if mode == "official" else
                   "Datos sintéticos determinísticos para desarrollo. No representan áreas, pozos ni producción reales.")
-    dataset = {"metadata": {"generatedAt": generated_at, "dataThrough": data_through, "mode": mode, "disclaimer": disclaimer}, "basin": basin, "blocks": blocks, "wells": wells}
+    history_points = 60 if mode == "official" else None
+    web_wells = [
+        {**well, "production": well["production"][-history_points:] if history_points else well["production"]}
+        for well in wells
+    ]
+    dataset = {
+        "metadata": {
+            "generatedAt": generated_at, "dataThrough": data_through, "mode": mode, "disclaimer": disclaimer,
+            "webHistoryPolicy": "Últimos 60 registros mensuales por pozo; acumulados por área usan todo el histórico descargado." if history_points else "Histórico demostrativo completo.",
+            "trajectoryCoverage": "La fuente nacional histórica de trayectorias ya no responde y la fuente vigente cubre Vaca Muerta, no la Cuenca Austral; la capa se publica vacía, sin geometrías inventadas.",
+        },
+        "basin": basin, "blocks": blocks, "wells": web_wells,
+        "trajectories": {"type": "FeatureCollection", "features": []},
+    }
     for directory in (PROCESSED_DIR, PUBLIC_DIR):
         directory.mkdir(parents=True, exist_ok=True)
     (PUBLIC_DIR / "dataset.json").write_text(json.dumps(dataset, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     (PROCESSED_DIR / "quality-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     with (PROCESSED_DIR / "wells.csv").open("w", encoding="utf-8", newline="") as stream:
         fields = ["id", "name", "blockId", "block", "operator", "province", "status", "environment", "longitude", "latitude", "firstProduction", "lastProduction", "formation"]
-        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer = csv.DictWriter(stream, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         writer.writerows({key: well.get(key) for key in fields} for well in wells)
     manifest = {
@@ -461,6 +590,8 @@ def write_outputs(mode: str, wells: list[dict[str, Any]], blocks: list[dict[str,
             "coordenadax/coordenaday se prueban en ambos órdenes contra límites geográficos argentinos.",
             "gas está expresado en miles de m3 mensuales; la tasa usa días productivos cuando se informan.",
             "geometrías operativas sin polígono oficial se marcan como envolventes derivadas de pozos.",
+            "la aplicación publica los últimos 60 registros mensuales por pozo para mantener una descarga web razonable; los acumulados de área usan el histórico completo.",
+            "no se fabrican trayectorias: la publicación nacional histórica no responde y la vigente sólo cubre Vaca Muerta.",
         ],
     }
     (PROCESSED_DIR / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

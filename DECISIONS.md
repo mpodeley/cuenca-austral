@@ -4,7 +4,7 @@ Las decisiones importantes viven acá para que no queden escondidas en una conve
 
 ## D-001 — Proyecto aislado
 
-Se trabaja exclusivamente en `/var/home/mpodeley/cuenca-austral`, sin inspeccionar ni reutilizar proyectos locales o repositorios previos.
+Se trabaja exclusivamente en `/var/home/mpodeley/cuenca-austral` y no se reutiliza código ni datos de proyectos previos. Más adelante, con autorización explícita, se inspeccionaron sólo referencias de adquisición para localizar las fuentes públicas.
 
 ## D-002 — Aplicación estática
 
@@ -34,7 +34,14 @@ El escenario de bloque comienza con cero pozos futuros. Cantidad, ritmo e invent
 
 La actualización mensual abre un pull request. Una persona revisa diferencias, manifiesto y calidad antes de integrar.
 
-## D-009 — Portal oficial temporalmente inaccesible
+## D-009 — Resolver el nodo oficial correcto
 
-Durante la construcción, las páginas públicas podían consultarse pero sus APIs de catálogo devolvieron errores 404/500. El pipeline conserva fallos explícitos y la app permanece en modo demostración hasta obtener una ejecución oficial válida.
+La API federada de Datos Argentina devolvía resultados incompletos. El pipeline consulta el nodo directo `datos.energia.gob.ar`, filtra `cuenca=AUSTRAL` en DataStore y registra recursos inaccesibles sin sustituirlos por datos inventados.
 
+## D-010 — Producto web compacto
+
+El procesamiento y los acumulados usan 487.813 filas históricas. El navegador recibe como máximo los últimos 60 registros por pozo para reducir el artefacto de 40 MB a unos 17 MB sin perder la ventana usada por el ajuste didáctico.
+
+## D-011 — Trayectorias ausentes, no fabricadas
+
+La publicación nacional histórica de trayectorias dejó de responder y la publicación vigente localizada corresponde a Vaca Muerta. Se mantiene una capa GeoJSON vacía y una explicación visible hasta encontrar una fuente pública válida para Austral.
