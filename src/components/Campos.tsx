@@ -161,7 +161,7 @@ export function Campos({ mode, id, go }: { mode: 'campo' | 'operadora'; id?: str
         </div>
       </Panel>
 
-      <KpiGrid>
+      <KpiGrid como="campo-indicadores">
         <Kpi label="Pozos" value={num(nWells)} sub={`${num(nProducers)} produjeron · ${num(nActive)} activos`} />
         <Kpi label={`${FLUID_LABEL[fluid]} hoy`} value={rate(fluid, total.q)} color={color} sub={`pico ${rate(fluid, history.peak.value)} en ${monthLabel(history.peak.month)}`} />
         <Kpi label={`${FLUID_LABEL[fluid]} acumulado`} value={volume(fluid, total.cum)} sub={`${pct(total.agotado)} del EUR · desde 2006`} />
@@ -171,7 +171,7 @@ export function Campos({ mode, id, go }: { mode: 'campo' | 'operadora'; id?: str
       </KpiGrid>
 
       <div style={{ display: 'grid', gridTemplateColumns: narrow ? '1fr' : 'minmax(0, 5fr) minmax(0, 7fr)', gap: 16 }}>
-        <Panel title={mode === 'operadora' ? 'Mapa de la operadora' : 'Mapa del campo'}>
+        <Panel como="campo-mapa" title={mode === 'operadora' ? 'Mapa de la operadora' : 'Mapa del campo'}>
           {concessions.data && context.data ? (
             <BasinMap
               home={home} height={narrow ? 300 : 400} context={context.data} concessions={concessions.data} highlight={single?.nombre}
@@ -184,7 +184,7 @@ export function Campos({ mode, id, go }: { mode: 'campo' | 'operadora'; id?: str
           <div style={{ marginTop: 8 }}><Legend items={[{ color: C.lime, label: 'activo' }, { color: C.orange, label: 'produjo y hoy está parado' }, { color: '#475569', label: 'sin producción registrada' }]} /></div>
         </Panel>
 
-        <Panel title={`Historia de ${FLUID_LABEL[fluid].toLowerCase()} (${history.unit})`} note="Promedio diario de cada mes. La línea punteada es la base declinante: lo que seguirían produciendo los pozos actuales sin perforar más.">
+        <Panel como="campo-historia" title={`Historia de ${FLUID_LABEL[fluid].toLowerCase()} (${history.unit})`} note="Promedio diario de cada mes. La línea punteada es la base declinante: lo que seguirían produciendo los pozos actuales sin perforar más.">
           <ResponsiveContainer width="100%" height={narrow ? 260 : 340}>
             <ComposedChart data={history.rows} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
@@ -204,7 +204,7 @@ export function Campos({ mode, id, go }: { mode: 'campo' | 'operadora'; id?: str
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: narrow ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-        <Panel title="Actividad por campaña" note="Pozos que entraron en producción cada año. La fuente empieza en enero de 2006: los pozos anteriores no tienen fecha de arranque y no se cuentan acá.">
+        <Panel como="campo-actividad" title="Actividad por campaña" note="Pozos que entraron en producción cada año. La fuente empieza en enero de 2006: los pozos anteriores no tienen fecha de arranque y no se cuentan acá.">
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={history.activity} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
@@ -217,6 +217,7 @@ export function Campos({ mode, id, go }: { mode: 'campo' | 'operadora'; id?: str
         </Panel>
 
         <Panel
+          como="campo-tipo"
           title={`Pozo tipo — en vivo (${FLUID_LABEL[fluid].toLowerCase()}, ${fluid === 'gas' ? 'Mm³/d' : 'm³/d'})`}
           note={typeCurve ? `${typeCurve.n} pozos de ${FLUID_LABEL[fluid].toLowerCase()} con arranque posterior a 2006, alineados por mes en producción. Banda P90–P10 y mediana.` : undefined}
         >
@@ -248,7 +249,7 @@ export function Campos({ mode, id, go }: { mode: 'campo' | 'operadora'; id?: str
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: narrow ? '1fr' : 'minmax(0, 5fr) minmax(0, 7fr)', gap: 16 }}>
-        <Panel title={`Distribución de EUR por pozo (${volumeUnit(fluid)})`}>
+        <Panel como="campo-eur" title={`Distribución de EUR por pozo (${volumeUnit(fluid)})`}>
           {!distribution ? <Empty>Hacen falta al menos {MIN_WELLS} pozos de {FLUID_LABEL[fluid].toLowerCase()} con EUR para mostrar la distribución.</Empty> : (
             <>
               <ResponsiveContainer width="100%" height={220}>
@@ -269,7 +270,7 @@ export function Campos({ mode, id, go }: { mode: 'campo' | 'operadora'; id?: str
         </Panel>
 
         {mode === 'operadora' ? (
-          <Panel title={`Campos de ${operatorName(subject.name)} — click para abrir la ficha`}>
+          <Panel como="campo-tabla" title={`Campos de ${operatorName(subject.name)} — click para abrir la ficha`}>
             <div className="scroll-x">
               <table>
                 <thead><tr>{['Campo', 'Pozos', 'Activos', `${FLUID_LABEL[fluid]} hoy`, 'Acumulado', 'EUR', '% agotado', 'Etapa'].map(label => <th key={label} style={th}>{label}</th>)}</tr></thead>
@@ -288,7 +289,7 @@ export function Campos({ mode, id, go }: { mode: 'campo' | 'operadora'; id?: str
             </div>
           </Panel>
         ) : (
-          <Panel title={`Pozos con mayor EUR de ${FLUID_LABEL[fluid].toLowerCase()} — click para ver la declinación`} note={`Hoy en ${fluid === 'gas' ? 'Mm³/d' : 'm³/d'}; acumulado y EUR en ${volumeUnit(fluid)}.`}>
+          <Panel como="campo-tabla" title={`Pozos con mayor EUR de ${FLUID_LABEL[fluid].toLowerCase()} — click para ver la declinación`} note={`Hoy en ${fluid === 'gas' ? 'Mm³/d' : 'm³/d'}; acumulado y EUR en ${volumeUnit(fluid)}.`}>
             {!wells.data ? <Loading what="los pozos" /> : (
               <div className="scroll-x">
                 <table>

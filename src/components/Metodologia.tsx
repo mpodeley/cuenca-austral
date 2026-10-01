@@ -1,15 +1,17 @@
+import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Panel } from './ui'
 import { C, mono } from '../theme'
 import { useBlocks, useForecast } from '../hooks/useData'
 import { monthLabel, num } from '../utils/format'
-import { REPO } from '../App'
+import { REPO } from '../didactica/registro'
 
 const Code = ({ children }: { children: ReactNode }) => <code style={{ ...mono, background: C.surfaceAlt, borderRadius: 4, padding: '1px 5px', fontSize: 12 }}>{children}</code>
 const P = ({ children }: { children: ReactNode }) => <p style={{ margin: '0 0 10px', lineHeight: 1.65, fontSize: 13.5, color: C.text2 }}>{children}</p>
 const File = ({ path }: { path: string }) => <a href={`${REPO}/blob/main/${path}`} target="_blank" rel="noreferrer" style={mono}>{path}</a>
 
-export function Metodologia() {
+export function Metodologia({ id }: { id?: string }) {
+  useEffect(() => { if (id) document.getElementById(`metodologia-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, [id])
   const blocks = useBlocks()
   const forecast = useForecast()
   const wells = blocks.data?.reduce((total, block) => total + block.n_pozos, 0)
@@ -112,7 +114,9 @@ export function Metodologia() {
         <p style={{ margin: '8px 0 0', fontSize: 13.5, color: C.muted, lineHeight: 1.6 }}>Cada número de la app sale de un script del repositorio. Acá están las reglas, en el orden en que se aplican.</p>
       </Panel>
       {sections.map((section, index) => (
-        <Panel key={section.title} title={`${index + 1}. ${section.title}`} accent={section.accent}>{section.body}</Panel>
+        <div key={section.title} id={`metodologia-${index + 1}`} style={{ scrollMarginTop: 56 }}>
+          <Panel title={`${index + 1}. ${section.title}`} accent={id === String(index + 1) ? C.blue : section.accent}>{section.body}</Panel>
+        </div>
       ))}
     </>
   )

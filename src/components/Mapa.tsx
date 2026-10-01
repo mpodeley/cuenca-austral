@@ -9,6 +9,7 @@ import { useCoarsePointer, useNarrow } from '../hooks/useViewport'
 import type { Block, Concession, Well } from '../types'
 import { BASIN_VIEW, binIndex, quantileBreaks } from '../utils/geo'
 import { auto, num, operatorName, pct, rate, title, volume } from '../utils/format'
+import { ComoBoton } from '../didactica/Drawer'
 import type { Route } from '../App'
 
 interface Metric { key: string; label: string; group: string; ramp: string[]; value: (block: Block) => number | null; format: (value: number) => string }
@@ -156,7 +157,7 @@ export function Mapa({ go }: { go: (route: Route) => void }) {
     hover.kind === 'well' ? <WellTooltip well={hover.well} /> : <BlockTooltip concession={hover.concession} block={byName.get(hover.concession.nombre)} />
 
   return (
-    <Panel>
+    <Panel como="mapa-base" title="Concesiones y pozos">
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', alignItems: 'center', marginBottom: 10 }}>
         <Check checked={showBlocks} onChange={setShowBlocks}>{narrow ? 'concesiones' : 'Concesiones'}</Check>
         <Check checked={showWells} onChange={setShowWells}>{narrow ? 'pozos' : 'Pozos'}</Check>
@@ -166,6 +167,7 @@ export function Mapa({ go }: { go: (route: Route) => void }) {
             type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar bloque u operadora…" aria-label="Buscar bloque u operadora"
             style={{ ...inputStyle, width: '100%' }}
           />
+          <span style={{ position: 'absolute', right: 6, top: 6 }}><ComoBoton id="mapa-buscar" small /></span>
           {matches.length > 0 && (
             <div style={{ position: 'absolute', zIndex: 5, top: '100%', left: 0, right: 0, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, marginTop: 4, overflow: 'hidden' }}>
               {matches.map(block => (
@@ -182,7 +184,7 @@ export function Mapa({ go }: { go: (route: Route) => void }) {
       </div>
 
       <details style={{ marginBottom: 10 }}>
-        <summary style={{ fontSize: 12, color: C.muted }}>Ajustar qué se colorea</summary>
+        <summary style={{ fontSize: 12, color: C.muted }}>Ajustar qué se colorea <ComoBoton id="mapa-color" small /></summary>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 18px', alignItems: 'center', padding: '10px 0 2px', fontSize: 12 }}>
           <label>bloques por:{' '}
             <select value={metricKey} onChange={event => setMetricKey(event.target.value)} style={selectStyle}>

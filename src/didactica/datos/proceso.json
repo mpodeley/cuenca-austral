@@ -1,0 +1,168 @@
+[
+ {
+  "id": "pedido-original",
+  "agente": "codex",
+  "fecha": "30 sep",
+  "titulo": "El pedido",
+  "etapa": "codex-plan",
+  "prompts": [
+   "vamos a hacer para un curso de IA aplicada a energia una aplicacion similar https://vm.podeley.ar/. no uses nada de lo qe tengo hecho en otros proyectos ni en esta compu ni en mi github. Vamos a enforcao en la cuenca austral de argentina, va a 1)mostrar un mapa con las concesines y poozos, mostrar ficha de cada bloque 3)armar pronosticos a partir de pozos tipo que tenes que ajustar con la historia de produccion. 4)las fuentes tienen que ser publicas, podes scrapperar de la secretaria de enegia o de donde consideras. La idea es que todo lo que se haga y se asume se pueda ver tabien en el repositorio, vamos a usar git, y publicar en mi cuenta personal de github usando pages. trabajemos en etapas cortas, armando las distintasa partes de la aplicacion. Voy a estar mostrando en vivo esta sesion a los asistentes del curso y el repo y la app les queda como producto/referencia de lo que se puede hacer con agentes de coding"
+  ],
+  "hizo": "El agente hizo ocho preguntas de opción múltiple (qué armar primero, onshore u offshore, gas o petróleo, cómo versionar los datos) y escribió un plan en cinco etapas.",
+  "salio": "Un plan aprobado. La persona eligió «pipeline primero»; en todo lo demás aceptó la opción recomendada.",
+  "commits": []
+ },
+ {
+  "id": "construccion",
+  "agente": "codex",
+  "fecha": "30 sep",
+  "titulo": "Primera construcción",
+  "etapa": "codex-construccion",
+  "prompts": [
+   "a partir de ahoratrabaja en modo auto, sin preguntar. por favor decime en que carpeta vas a trabajar.",
+   "me ests preguntando muchas cosasa, no podemos poner auto mode on?",
+   "sigamos ocn el plan, recordemos que la pagina tiene que ser muy didactica con el como se hizo / esta haciendo, con links a los repos y los md. es un ejemplo de como se hace un app usndo agentes para no programadores"
+  ],
+  "hizo": "Armó el pipeline, el mapa, una ficha y un pronóstico. Las APIs oficiales le devolvían errores, así que construyó todo sobre un conjunto de datos sintético, rotulado como demostración.",
+  "salio": "«Implementación local completa», con pruebas en verde, sobre 3 áreas y 40 pozos inventados.",
+  "commits": [
+   "f0cd892",
+   "6b0e994",
+   "f8c0f9b",
+   "d6ac3d1",
+   "31a9d4d"
+  ]
+ },
+ {
+  "id": "publicacion-demo",
+  "agente": "codex",
+  "fecha": "1 oct",
+  "titulo": "Publicación de la demo",
+  "etapa": "codex-publicacion",
+  "prompts": [
+   "listo"
+  ],
+  "hizo": "Con el acceso a GitHub renovado por la persona, creó el repositorio público y activó GitHub Pages.",
+  "salio": "Sitio «publicado y funcionando», todavía con datos sintéticos.",
+  "commits": []
+ },
+ {
+  "id": "datos",
+  "agente": "codex",
+  "fecha": "1 oct",
+  "titulo": "«Consigamos los datos»",
+  "etapa": "codex-datos",
+  "prompts": [
+   "consigamos los datos por favor",
+   "podes fijarte de donde saco en otros repos",
+   "produccion, poligonos, ubicacio ny trayectorias de lso pozos... mientras hascias la investigacion vi que bajaste csvs.",
+   "mete modo yolo",
+   "no me preguntes para correr comandos"
+  ],
+  "hizo": "Consultó la API del portal de datos filtrando por cuenca y publicó datos oficiales. Avisó que no había trayectorias y que 2014, 2015 y 2017 no respondían.",
+  "salio": "65 áreas y 3.236 pozos reales, pero con años enteros faltantes: además de los tres avisados, 2024 y 2025 llegaron casi vacíos y nadie lo notó. El reporte de calidad decía «pass».",
+  "commits": [
+   "4eabcc4"
+  ]
+ },
+ {
+  "id": "mapa-vacio",
+  "agente": "codex",
+  "fecha": "1 oct",
+  "titulo": "«En el mapa no veo nada»",
+  "etapa": "codex-mapa",
+  "prompts": [
+   "en el mapa no veo ninguna concesion ni pozo.. ni nada"
+  ],
+  "hizo": "Encontró que las capas esperaban a que cargara el mapa base externo y las hizo independientes.",
+  "salio": "Un arreglo publicado 90 segundos antes de que la persona cambiara de agente.",
+  "commits": [
+   "16c8863"
+  ]
+ },
+ {
+  "id": "reclamo",
+  "agente": "claude",
+  "fecha": "1 oct",
+  "titulo": "«No hace casi nada de lo que pedí»",
+  "etapa": "claude-diagnostico",
+  "giro": true,
+  "prompts": [
+   "codex hizo esto https://mpodeley.hub.io/cuenca-austral/ pero no hace casi nada de lo que pedi, podes por favor arreglarlo",
+   "tiene que ser algo mas parecido a vm.podeley.ar",
+   "usa lo que necesites"
+  ],
+  "hizo": "Antes de tocar nada, lanzó cuatro exploraciones en paralelo: recuperar el pedido original palabra por palabra de la sesión anterior, revisar qué entregaba el repositorio, describir en detalle la app de referencia y buscar su código. Sumó la producción de la cuenca mes a mes y aparecieron los años vacíos.",
+  "salio": "Una lista de diferencias contra el pedido y contra la referencia, la causa de los datos faltantes y un plan en ocho etapas.",
+  "commits": []
+ },
+ {
+  "id": "referencia",
+  "agente": "claude",
+  "fecha": "1 oct",
+  "titulo": "Un permiso que cambió el plan",
+  "etapa": null,
+  "prompts": [
+   "Reescribir desde cero (Recommended)"
+  ],
+  "hizo": "El plan era portar el código de la app de referencia, que vive en un repositorio privado. El sistema de permisos bloqueó llevar ese código a un repositorio público. El agente no buscó otra vía: lo informó y preguntó.",
+  "salio": "La persona eligió reescribir. La referencia publicada pasó a ser la especificación; su código no se copió.",
+  "commits": []
+ },
+ {
+  "id": "datos-completos",
+  "agente": "claude",
+  "fecha": "1 oct",
+  "titulo": "Datos completos",
+  "etapa": "claude-datos",
+  "prompts": [],
+  "hizo": "Cambió la vía de acceso: en lugar de la API de consulta, los 21 CSV anuales completos leídos por streaming. Agregó el ajuste de declinación por pozo, las fichas de bloque, los pozos tipo y un control que corta el build si falta un mes.",
+  "salio": "Historia de enero de 2006 a agosto de 2026 sin meses faltantes, para gas y petróleo, y 20 pruebas en verde.",
+  "commits": [
+   "97a224a"
+  ]
+ },
+ {
+  "id": "app",
+  "agente": "claude",
+  "fecha": "1 oct",
+  "titulo": "La app, de nuevo",
+  "etapa": "claude-app",
+  "prompts": [
+   "por favor comitea a github"
+  ],
+  "hizo": "Escribió las pestañas Mapa, Yacimiento, Pronóstico, Pozos, Metodología y Cómo se hizo. Después la abrió en un Chrome real y la manejó como un usuario: así encontró que el clic en un bloque no navegaba, una línea espuria en el pronóstico y una ficha cortada.",
+  "salio": "La versión actual, con los defectos encontrados ya corregidos antes de publicarla.",
+  "commits": [
+   "297f2c7",
+   "d88d67b"
+  ]
+ },
+ {
+  "id": "publicar",
+  "agente": "claude",
+  "fecha": "1 oct",
+  "titulo": "Publicar",
+  "etapa": "claude-publicar",
+  "prompts": [
+   "publicalo porfa en main"
+  ],
+  "hizo": "Esperó las pruebas automáticas, integró en la rama principal y comprobó el sitio en vivo. La primera comprobación miró una corrida vieja del deploy: lo notó y volvió a esperar la correcta.",
+  "salio": "Sitio público actualizado, con CI y Pages en verde.",
+  "commits": []
+ },
+ {
+  "id": "didactica",
+  "agente": "claude",
+  "fecha": "1 oct",
+  "titulo": "La capa didáctica",
+  "etapa": "claude-didactica",
+  "prompts": [
+   "quedo muy bueno, me gustaria mejorar el aspecto didactico, que cada boton y modulo se vincule facilmente a como se hizo, con paginas interactivas que expliquen con esquemas la arquitectura y el proceso para hacerlo, que al repo se llegue por links",
+   "podemos ver cuantos tokens se gastaron en cada etapa por ahi"
+  ],
+  "hizo": "Armó un registro único de módulos del que salen el panel «cómo se hizo», el esquema de arquitectura y un documento en el repositorio, con una prueba que falla si un link al código deja de existir. Sumó los tokens de cada etapa desde los registros de las sesiones.",
+  "salio": "Lo que estás leyendo.",
+  "commits": []
+ }
+]

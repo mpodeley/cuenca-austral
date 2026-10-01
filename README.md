@@ -17,7 +17,9 @@ Si no programás, empezá por [COURSE.md](COURSE.md): cuenta cómo se dirigió y
 | Pronóstico | Cuenca o campo: base declinante más pozos nuevos, tres escenarios, supuestos editables, programa campo por campo y descarga CSV |
 | Pozos | Tabla buscable y ordenable, declinación con ajuste de Arps y banda, ficha del pozo y descarga CSV |
 | Metodología | Cada regla de cálculo, con sus umbrales y limitaciones |
-| Cómo se hizo | El proceso, lo que salió mal y los enlaces para auditar |
+| Cómo se hizo | Proceso con los pedidos textuales y los tokens por etapa, esquema interactivo de arquitectura, un dato seguido de punta a punta, el modelo para tocar y los enlaces para auditar |
+
+Cada módulo tiene un botón `</>` que abre cómo se hizo: qué hace, cómo se calcula, el recorrido del dato y links a su código. El **modo clase** los resalta. El mismo mapa módulo → código está en [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Estado de los datos
 
@@ -98,5 +100,7 @@ data/store/         insumos compactos versionados
 data/processed/     reporte de calidad y manifiesto
 public/data/        archivos que consume la web
 src/                aplicación: pestañas, mapa SVG y modelo de pronóstico
+src/didactica/      registro de módulos, panel «cómo se hizo» y páginas explicativas
+scripts/            anclas al código y resumen de tokens de las sesiones
 .github/workflows/  CI, Pages y actualización mensual
 ```

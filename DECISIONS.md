@@ -77,3 +77,11 @@ El reporte anterior decía "pass" con 17 meses casi vacíos, porque sólo revisa
 ## D-018 — Sin datos sintéticos
 
 Se retira el modo demostración. La app sólo muestra datos oficiales procesados.
+
+## D-019 — Un registro único para explicar la app
+
+Cada módulo de la app tiene un botón «cómo se hizo» que abre qué hace, cómo se calcula, el recorrido de su dato y los links a su código. Todo sale de un solo registro (`src/didactica/datos/`), que también genera el esquema interactivo de arquitectura y `ARCHITECTURE.md`. Un script calcula en qué línea está cada función citada y una prueba falla si un archivo o función deja de existir: los links al repositorio no se pueden pudrir en silencio.
+
+## D-020 — El proceso se muestra tal cual fue
+
+La página Proceso publica los pedidos de la persona textuales, con sus errores de tipeo, y los tokens que consumió cada etapa. Los totales se leen de los registros locales de las sesiones con `scripts/tokens_sesiones.py`; sólo se publican sumas por etapa, no el contenido de las conversaciones.

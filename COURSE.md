@@ -68,7 +68,15 @@ La primera versión de esta app no cumplía el pedido, y eso es parte del materi
 - Conviene pedirle al agente que diga qué *no* pudo hacer. La primera versión lo decía, pero en la mitad de un mensaje largo.
 - Los permisos también son parte del proceso: el segundo agente no pudo copiar código de un repositorio privado a uno público, lo informó y preguntó cómo seguir.
 
-## 6. Guardrails usados
+## 6. Cómo usar la app en clase
+
+- **Modo clase** (arriba a la derecha): resalta cada módulo y muestra el botón `</> cómo se hizo` con su etiqueta. Cada botón abre un panel con qué hace el módulo, cómo se calcula, el recorrido del dato y links al código.
+- **Links directos**: agregar `?como=<id>` a cualquier dirección abre ese panel. Por ejemplo, `#/campo?como=campo-tipo` abre la ficha con la explicación del pozo tipo. Los ids están en [ARCHITECTURE.md](ARCHITECTURE.md).
+- **Cómo se hizo → Proceso**: los pedidos textuales, qué hizo cada agente, qué salió y cuántos tokens costó cada etapa.
+- **Cómo se hizo → Arquitectura**: el esquema de la fuente pública a la pantalla. Elegir un módulo muestra de dónde sale su dato.
+- **Un dato, de punta a punta** y **El modelo, para tocar**: para explicar el ajuste de Arps y el pronóstico moviendo controles, sin fórmulas en el pizarrón.
+
+## 7. Guardrails usados
 
 - Repositorio nuevo. La app de referencia se usó como especificación; su código no se copió.
 - Los datos crudos no se versionan, pero sí su procedencia y los derivados.
@@ -77,7 +85,7 @@ La primera versión de esta app no cumplía el pedido, y eso es parte del materi
 - Los cambios automáticos de datos abren un pull request; no escriben directamente en `main`.
 - Las vulnerabilidades de dependencias se auditan antes de publicar.
 
-## 7. Preguntas para discutir en clase
+## 8. Preguntas para discutir en clase
 
 1. ¿Qué parte necesitó conocimiento del dominio y cuál pudo delegarse?
 2. ¿Cómo detectarían un error de unidades sin leer Python?
@@ -85,7 +93,7 @@ La primera versión de esta app no cumplía el pedido, y eso es parte del materi
 4. ¿Qué debería revisar una persona antes de aceptar el PR mensual?
 5. ¿Qué cambia si la app se usa para una decisión económica real?
 
-## 8. Próximos ejercicios
+## 9. Próximos ejercicios
 
 - Sumar la producción anterior a 2006 desde las series históricas por yacimiento.
 - Contrastar el EUR por bloque con las reservas certificadas publicadas.

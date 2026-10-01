@@ -1,0 +1,819 @@
+[
+ {
+  "id": "mapa-base",
+  "pantalla": "mapa",
+  "titulo": "Mapa de concesiones y pozos",
+  "queHace": "Dibuja la cuenca sin depender de ningún servicio de mapas: costa, concesiones y cada pozo en su ubicación de superficie. Se puede acercar, mover y tocar.",
+  "comoSeCalcula": [
+   "El pipeline baja polígonos y coordenadas oficiales y los deja en archivos chicos.",
+   "El navegador los proyecta (Mercator) y los dibuja como SVG.",
+   "Los pozos son trazos de largo cero con punta redonda: así el punto mide lo mismo a cualquier zoom.",
+   "Al mover el cursor se busca el pozo más cercano; si no hay ninguno a 7 píxeles, se toma el bloque que está debajo."
+  ],
+  "linaje": [
+   "f_padron",
+   "f_conc",
+   "f_cuenca",
+   "f_ne",
+   "p_fetch_geo",
+   "s_geo",
+   "p_build",
+   "w_geo",
+   "w_wells",
+   "n_mapa",
+   "v_mapa"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/components/BasinMap.tsx",
+    "simbolo": "BasinMap",
+    "nota": "el mapa SVG y la detección de qué hay bajo el cursor"
+   },
+   {
+    "archivo": "src/components/BasinMap.tsx",
+    "simbolo": "WellDots",
+    "nota": "los pozos como puntos de tamaño fijo"
+   },
+   {
+    "archivo": "src/hooks/usePanZoom.ts",
+    "simbolo": "usePanZoom",
+    "nota": "rueda, arrastre y pellizco"
+   },
+   {
+    "archivo": "src/utils/geo.ts",
+    "simbolo": "projY",
+    "nota": "proyección"
+   },
+   {
+    "archivo": "pipeline/fetch_geo.py",
+    "simbolo": "fetch_concessions",
+    "nota": "concesiones y su superficie"
+   },
+   {
+    "archivo": "pipeline/fetch_geo.py",
+    "simbolo": "fetch_context",
+    "nota": "costa recortada a la región"
+   }
+  ],
+  "decisiones": [
+   "D-015",
+   "D-011"
+  ],
+  "metodologia": 1,
+  "pedido": "pedido-original"
+ },
+ {
+  "id": "mapa-color",
+  "pantalla": "mapa",
+  "titulo": "Qué se colorea",
+  "queHace": "Pinta los bloques según una métrica (producción, EUR, agotamiento, actividad) y los pozos según estado, fluido, campaña, ambiente o tipo.",
+  "comoSeCalcula": [
+   "Cada métrica es una función que saca un número de la ficha del bloque.",
+   "Los valores se ordenan y se parten en cinco grupos con la misma cantidad de bloques (cuantiles).",
+   "Cada grupo recibe un tono; la leyenda muestra los cortes reales."
+  ],
+  "linaje": [
+   "p_build",
+   "w_blocks",
+   "w_wells",
+   "n_mapa",
+   "v_mapa"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/components/Mapa.tsx",
+    "simbolo": "METRICS",
+    "nota": "lista de métricas de bloque"
+   },
+   {
+    "archivo": "src/components/Mapa.tsx",
+    "simbolo": "wellPalette",
+    "nota": "colores de pozo y su leyenda"
+   },
+   {
+    "archivo": "src/utils/geo.ts",
+    "simbolo": "quantileBreaks",
+    "nota": "cortes por cuantiles"
+   }
+  ],
+  "decisiones": [
+   "D-012"
+  ],
+  "metodologia": 8,
+  "pedido": "referencia"
+ },
+ {
+  "id": "mapa-buscar",
+  "pantalla": "mapa",
+  "titulo": "Buscador y tooltips",
+  "queHace": "Encuentra un bloque por nombre u operadora y muestra un resumen al pasar el cursor por un bloque o un pozo.",
+  "comoSeCalcula": [
+   "La búsqueda filtra la lista de bloques por texto y muestra hasta seis coincidencias.",
+   "El resumen sale de la ficha ya calculada del bloque o del pozo; no se calcula nada al vuelo."
+  ],
+  "linaje": [
+   "p_build",
+   "w_blocks",
+   "w_wells",
+   "v_mapa"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/components/Mapa.tsx",
+    "simbolo": "BlockTooltip",
+    "nota": "resumen del bloque"
+   },
+   {
+    "archivo": "src/components/Mapa.tsx",
+    "simbolo": "WellTooltip",
+    "nota": "resumen del pozo"
+   },
+   {
+    "archivo": "src/components/Mapa.tsx",
+    "simbolo": "Mapa",
+    "nota": "buscador y armado de la pantalla"
+   }
+  ],
+  "decisiones": [
+   "D-012"
+  ],
+  "metodologia": 8,
+  "pedido": "pedido-original"
+ },
+ {
+  "id": "campo-indicadores",
+  "pantalla": "campo",
+  "titulo": "Indicadores del campo",
+  "queHace": "Resume un campo o una operadora en seis números: pozos, producción de hoy, acumulada, EUR, superficie y actividad reciente.",
+  "comoSeCalcula": [
+   "El bloque de cada pozo es el área de concesión que declara.",
+   "Producción de hoy: promedio de los últimos tres meses.",
+   "EUR del bloque: suma de los EUR de sus pozos; % agotado = acumulada / EUR.",
+   "Superficie: se calcula del polígono oficial, que no trae ese dato.",
+   "En modo operadora se suman sus bloques."
+  ],
+  "linaje": [
+   "f_capiv",
+   "p_fetch_capiv",
+   "s_capiv",
+   "p_arps",
+   "p_build",
+   "w_blocks",
+   "v_campo"
+  ],
+  "codigo": [
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "build_blocks",
+    "nota": "ficha de cada bloque"
+   },
+   {
+    "archivo": "pipeline/fetch_geo.py",
+    "simbolo": "polygon_area_km2",
+    "nota": "superficie"
+   },
+   {
+    "archivo": "src/components/Campos.tsx",
+    "simbolo": "mergeFluid",
+    "nota": "suma de bloques de una operadora"
+   },
+   {
+    "archivo": "src/components/Campos.tsx",
+    "simbolo": "Campos",
+    "nota": "la pantalla"
+   }
+  ],
+  "decisiones": [
+   "D-014"
+  ],
+  "metodologia": 8,
+  "pedido": "pedido-original"
+ },
+ {
+  "id": "campo-mapa",
+  "pantalla": "campo",
+  "titulo": "Mapa del campo",
+  "queHace": "El mismo mapa, encuadrado en el campo elegido, con sus pozos.",
+  "comoSeCalcula": [
+   "Se toman los polígonos del campo, se calcula su caja envolvente y se le agrega un 15 % de margen.",
+   "Si el campo no tiene polígono oficial, se encuadran sus pozos."
+  ],
+  "linaje": [
+   "p_fetch_geo",
+   "s_geo",
+   "p_build",
+   "w_geo",
+   "w_wells",
+   "n_mapa",
+   "v_campo"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/components/BasinMap.tsx",
+    "simbolo": "BasinMap",
+    "nota": "el mismo componente del mapa general"
+   },
+   {
+    "archivo": "src/utils/geo.ts",
+    "simbolo": "pad",
+    "nota": "encuadre con margen"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "derived_polygon",
+    "nota": "envolvente cuando no hay polígono oficial"
+   }
+  ],
+  "decisiones": [
+   "D-015"
+  ],
+  "metodologia": 11,
+  "pedido": "referencia"
+ },
+ {
+  "id": "campo-historia",
+  "pantalla": "campo",
+  "titulo": "Historia de producción",
+  "queHace": "Muestra la producción del campo mes a mes desde 2006, cuántos pozos estaban activos y cómo seguiría sin perforar más.",
+  "comoSeCalcula": [
+   "La fuente trae una fila por pozo, mes y formación: se suman.",
+   "La tasa es el volumen del mes dividido por los días del mes.",
+   "Si una operadora todavía no declaró los últimos meses, sus pozos sostienen la última tasa.",
+   "La línea punteada suma la proyección de cada pozo activo (base declinante)."
+  ],
+  "linaje": [
+   "f_capiv",
+   "p_fetch_capiv",
+   "s_capiv",
+   "p_arps",
+   "p_build",
+   "w_forecast",
+   "v_campo"
+  ],
+  "codigo": [
+   {
+    "archivo": "pipeline/fetch_capiv.py",
+    "simbolo": "stream_year",
+    "nota": "lectura del CSV anual"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "history",
+    "nota": "historia agregada y declaración atrasada"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "well_projection",
+    "nota": "proyección de cada pozo"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "quality",
+    "nota": "control de que no falte ningún mes"
+   }
+  ],
+  "decisiones": [
+   "D-013",
+   "D-017"
+  ],
+  "metodologia": 2,
+  "pedido": "datos"
+ },
+ {
+  "id": "campo-actividad",
+  "pantalla": "campo",
+  "titulo": "Actividad por campaña",
+  "queHace": "Cuenta cuántos pozos entraron en producción cada año.",
+  "comoSeCalcula": [
+   "La campaña de un pozo es el año de su primer mes con producción.",
+   "Los pozos que ya producían en enero de 2006 no tienen fecha de arranque y quedan afuera."
+  ],
+  "linaje": [
+   "f_capiv",
+   "p_fetch_capiv",
+   "s_capiv",
+   "p_build",
+   "w_forecast",
+   "v_campo"
+  ],
+  "codigo": [
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "build_wells",
+    "nota": "primer mes y campaña de cada pozo"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "build_blocks",
+    "nota": "conteo por año"
+   }
+  ],
+  "decisiones": [
+   "D-013"
+  ],
+  "metodologia": 11,
+  "pedido": "referencia"
+ },
+ {
+  "id": "campo-tipo",
+  "pantalla": "campo",
+  "titulo": "Pozo tipo en vivo",
+  "queHace": "Arma el pozo «típico» del campo: cómo produce un pozo mes a mes desde que arranca, con la banda entre los mejores y los peores.",
+  "comoSeCalcula": [
+   "Se alinean los pozos por su primer mes con producción.",
+   "Para cada mes se ordenan las tasas y se toman los percentiles 10, 50 y 90.",
+   "Sólo entran pozos con arranque observado, al menos 12 meses de historia y el mismo fluido principal.",
+   "Hacen falta 8 pozos; con menos, se avisa en vez de inventar una curva."
+  ],
+  "linaje": [
+   "f_capiv",
+   "p_fetch_capiv",
+   "s_capiv",
+   "p_build",
+   "w_series",
+   "n_tipo",
+   "v_campo"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/utils/typeCurve.ts",
+    "simbolo": "computeTypeCurve",
+    "nota": "percentiles en el navegador"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "type_profile",
+    "nota": "la versión del pipeline, que alimenta el pronóstico"
+   }
+  ],
+  "decisiones": [
+   "D-016"
+  ],
+  "metodologia": 7,
+  "pedido": "pedido-original"
+ },
+ {
+  "id": "campo-eur",
+  "pantalla": "campo",
+  "titulo": "Distribución de EUR",
+  "queHace": "Muestra cuántos pozos hay de cada tamaño: pocos pozos muy buenos y muchos chicos.",
+  "comoSeCalcula": [
+   "Se toma el EUR de cada pozo del fluido elegido.",
+   "Se reparte en 12 tramos hasta el percentil 95; el último tramo junta el resto.",
+   "Las líneas marcan P90, P50 y P10."
+  ],
+  "linaje": [
+   "p_arps",
+   "p_build",
+   "w_wells",
+   "v_campo"
+  ],
+  "codigo": [
+   {
+    "archivo": "pipeline/arps.py",
+    "simbolo": "eur",
+    "nota": "EUR y banda de cada pozo"
+   },
+   {
+    "archivo": "src/components/Campos.tsx",
+    "simbolo": "Campos",
+    "nota": "armado del histograma"
+   }
+  ],
+  "decisiones": [
+   "D-016"
+  ],
+  "metodologia": 5,
+  "pedido": "referencia"
+ },
+ {
+  "id": "campo-tabla",
+  "pantalla": "campo",
+  "titulo": "Tabla de pozos o de campos",
+  "queHace": "Lista los pozos con mayor EUR del campo, o los campos de la operadora. Cada fila lleva a su detalle.",
+  "comoSeCalcula": [
+   "Se ordena por EUR del fluido elegido y se muestran los doce primeros."
+  ],
+  "linaje": [
+   "p_build",
+   "w_wells",
+   "w_blocks",
+   "v_campo"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/components/Campos.tsx",
+    "simbolo": "Campos",
+    "nota": "tablas"
+   },
+   {
+    "archivo": "src/App.tsx",
+    "simbolo": "routeHash",
+    "nota": "links entre pantallas"
+   }
+  ],
+  "decisiones": [
+   "D-012"
+  ],
+  "metodologia": 8,
+  "pedido": "referencia"
+ },
+ {
+  "id": "pozo-declinacion",
+  "pantalla": "pozos",
+  "titulo": "Declinación del pozo",
+  "queHace": "Muestra la producción real del pozo, la curva que mejor la describe y hacia dónde va, con una banda de incertidumbre.",
+  "comoSeCalcula": [
+   "Se busca el pico de la serie (máximo de la media móvil de tres meses).",
+   "Desde ahí se ajusta una curva de Arps: producción inicial, velocidad de caída y forma.",
+   "La proyección arranca en la última tasa real y nunca declina menos que 8 % anual.",
+   "La banda sale de sortear 200 veces los parámetros dentro de la incertidumbre del ajuste."
+  ],
+  "linaje": [
+   "f_capiv",
+   "p_fetch_capiv",
+   "s_capiv",
+   "p_arps",
+   "p_build",
+   "w_series",
+   "w_wells",
+   "n_arps",
+   "v_pozos"
+  ],
+  "codigo": [
+   {
+    "archivo": "pipeline/arps.py",
+    "simbolo": "fit",
+    "nota": "ajuste de la curva"
+   },
+   {
+    "archivo": "pipeline/arps.py",
+    "simbolo": "project",
+    "nota": "proyección con declinación terminal"
+   },
+   {
+    "archivo": "src/components/Pozos.tsx",
+    "simbolo": "declineRows",
+    "nota": "arma real, ajuste y banda para el gráfico"
+   },
+   {
+    "archivo": "src/utils/arps.ts",
+    "simbolo": "hyperbolic",
+    "nota": "la fórmula, en el navegador"
+   }
+  ],
+  "decisiones": [
+   "D-006",
+   "D-016"
+  ],
+  "metodologia": 4,
+  "pedido": "pedido-original"
+ },
+ {
+  "id": "pozo-ficha",
+  "pantalla": "pozos",
+  "titulo": "Ficha del pozo",
+  "queHace": "Los datos declarados del pozo y lo que se estimó para él: EUR, banda, confianza y parámetros del ajuste.",
+  "comoSeCalcula": [
+   "Los atributos son los del último mes informado.",
+   "EUR = lo ya producido + la cola proyectada hasta el límite económico o 30 años.",
+   "La confianza depende de cuán bien ajusta la curva (R²) y de cuántos meses hay."
+  ],
+  "linaje": [
+   "f_capiv",
+   "f_padron",
+   "p_fetch_capiv",
+   "p_fetch_geo",
+   "p_arps",
+   "p_build",
+   "w_wells",
+   "v_pozos"
+  ],
+  "codigo": [
+   {
+    "archivo": "pipeline/arps.py",
+    "simbolo": "eur",
+    "nota": "EUR, banda y confianza"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "build_wells",
+    "nota": "registro de cada pozo"
+   },
+   {
+    "archivo": "src/components/Pozos.tsx",
+    "simbolo": "Ficha",
+    "nota": "la ficha"
+   }
+  ],
+  "decisiones": [
+   "D-016"
+  ],
+  "metodologia": 5,
+  "pedido": "referencia"
+ },
+ {
+  "id": "pozo-tabla",
+  "pantalla": "pozos",
+  "titulo": "Tabla de pozos y CSV",
+  "queHace": "Todos los pozos, con búsqueda, filtros y orden por cualquier columna. El CSV trae todo para abrir en una planilla.",
+  "comoSeCalcula": [
+   "Filtra y ordena en el navegador sobre el archivo de pozos.",
+   "Muestra 250 filas; el CSV completo lo escribe el pipeline con las mismas columnas."
+  ],
+  "linaje": [
+   "p_build",
+   "w_wells",
+   "v_pozos"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/components/Pozos.tsx",
+    "simbolo": "COLUMNS",
+    "nota": "columnas y cómo se ordena cada una"
+   },
+   {
+    "archivo": "src/components/Pozos.tsx",
+    "simbolo": "Pozos",
+    "nota": "filtros"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "write_outputs",
+    "nota": "escribe wells.json y wells.csv"
+   }
+  ],
+  "decisiones": [
+   "D-012"
+  ],
+  "metodologia": 2,
+  "pedido": "referencia"
+ },
+ {
+  "id": "pron-escenario",
+  "pantalla": "pronostico",
+  "titulo": "Escenarios",
+  "queHace": "Tres historias posibles sobre cuánto se perfora: menos, igual o más que en los últimos cinco años.",
+  "comoSeCalcula": [
+   "Cada escenario es un juego de supuestos con nombre.",
+   "Las etiquetas «asume:» muestran los supuestos activos; si movés algo, aparece «editado»."
+  ],
+  "linaje": [
+   "p_build",
+   "w_forecast",
+   "n_forecast",
+   "v_pron"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/utils/forecast.ts",
+    "simbolo": "PRESETS",
+    "nota": "los tres escenarios y su relato"
+   },
+   {
+    "archivo": "src/components/Pronostico.tsx",
+    "simbolo": "Pronostico",
+    "nota": "la pantalla"
+   }
+  ],
+  "decisiones": [
+   "D-016"
+  ],
+  "metodologia": 10,
+  "pedido": "pedido-original"
+ },
+ {
+  "id": "pron-indicadores",
+  "pantalla": "pronostico",
+  "titulo": "Indicadores del pronóstico",
+  "queHace": "Compara la producción de hoy con la de dentro de cinco años: sin perforar, con el escenario elegido y el rango entre escenarios.",
+  "comoSeCalcula": [
+   "«+5a» es el promedio del quinto año del pronóstico.",
+   "El rango corre los tres escenarios con las mismas ediciones por campo."
+  ],
+  "linaje": [
+   "p_build",
+   "w_forecast",
+   "n_forecast",
+   "v_pron"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/utils/forecast.ts",
+    "simbolo": "yearAverage",
+    "nota": "promedio del año pedido"
+   },
+   {
+    "archivo": "src/utils/forecast.ts",
+    "simbolo": "runForecast",
+    "nota": "corrida completa"
+   }
+  ],
+  "decisiones": [
+   "D-016"
+  ],
+  "metodologia": 9,
+  "pedido": "referencia"
+ },
+ {
+  "id": "pron-grafico",
+  "pantalla": "pronostico",
+  "titulo": "Gráfico del pronóstico",
+  "queHace": "Apila tres cosas: lo que ya pasó, lo que seguirán dando los pozos de hoy y lo que agregarían los pozos nuevos.",
+  "comoSeCalcula": [
+   "Base: cada pozo activo sigue su propia curva; se suman.",
+   "Pozos nuevos: cada mes entra una tanda y cada tanda sigue el pozo tipo desde su mes de entrada.",
+   "El total es base + pozos nuevos. Se puede ver la cuenca o un campo."
+  ],
+  "linaje": [
+   "f_capiv",
+   "p_fetch_capiv",
+   "s_capiv",
+   "p_arps",
+   "p_build",
+   "w_forecast",
+   "n_forecast",
+   "v_pron"
+  ],
+  "codigo": [
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "well_projection",
+    "nota": "base declinante"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "type_profile",
+    "nota": "pozo tipo de cada campo"
+   },
+   {
+    "archivo": "src/utils/forecast.ts",
+    "simbolo": "convolve",
+    "nota": "producción de las tandas de pozos nuevos"
+   },
+   {
+    "archivo": "src/utils/forecast.ts",
+    "simbolo": "fieldForecast",
+    "nota": "pronóstico de un campo"
+   }
+  ],
+  "decisiones": [
+   "D-016"
+  ],
+  "metodologia": 9,
+  "pedido": "pedido-original"
+ },
+ {
+  "id": "pron-supuestos",
+  "pantalla": "pronostico",
+  "titulo": "Supuestos editables",
+  "queHace": "Los controles que mueven el pronóstico: cuánto se perfora, si crece, hasta cuándo alcanza el inventario y qué tan bueno es el pozo tipo.",
+  "comoSeCalcula": [
+   "Pozos por mes = ritmo histórico × actividad × crecimiento, hasta agotar el inventario.",
+   "El caso bajo o alto multiplica el pozo tipo por la dispersión real entre pozos.",
+   "Doble click devuelve el control al valor del escenario."
+  ],
+  "linaje": [
+   "w_forecast",
+   "n_forecast",
+   "v_pron"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/utils/forecast.ts",
+    "simbolo": "schedule",
+    "nota": "cronograma de pozos nuevos"
+   },
+   {
+    "archivo": "src/components/ui.tsx",
+    "simbolo": "Slider",
+    "nota": "el control"
+   }
+  ],
+  "decisiones": [
+   "D-016",
+   "D-007"
+  ],
+  "metodologia": 10,
+  "pedido": "referencia"
+ },
+ {
+  "id": "pron-actividad",
+  "pantalla": "pronostico",
+  "titulo": "Actividad: histórico y plan",
+  "queHace": "Pone lado a lado los pozos que entraron cada año y los que supone el escenario.",
+  "comoSeCalcula": [
+   "Histórico: pozos por año de primera producción.",
+   "Plan: suma del cronograma mensual de cada año; es un valor esperado y puede no ser entero."
+  ],
+  "linaje": [
+   "p_build",
+   "w_forecast",
+   "n_forecast",
+   "v_pron"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/utils/forecast.ts",
+    "simbolo": "schedule",
+    "nota": "cronograma"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "build_blocks",
+    "nota": "pozos por año y ritmo histórico"
+   }
+  ],
+  "decisiones": [
+   "D-016"
+  ],
+  "metodologia": 9,
+  "pedido": "referencia"
+ },
+ {
+  "id": "pron-programa",
+  "pantalla": "pronostico",
+  "titulo": "Programa campo por campo y descarga",
+  "queHace": "Deja pisar el ritmo y el inventario de un campo puntual, y bajar el escenario a un CSV.",
+  "comoSeCalcula": [
+   "Una edición de campo reemplaza al supuesto general sólo para ese campo.",
+   "Sólo perforan los campos del fluido elegido que tienen pozo tipo.",
+   "El CSV se arma en el navegador con lo que está en pantalla."
+  ],
+  "linaje": [
+   "p_build",
+   "w_forecast",
+   "w_blocks",
+   "n_forecast",
+   "v_pron"
+  ],
+  "codigo": [
+   {
+    "archivo": "src/utils/forecast.ts",
+    "simbolo": "fieldForecast",
+    "nota": "ediciones por campo"
+   },
+   {
+    "archivo": "src/components/Pronostico.tsx",
+    "simbolo": "downloadCsv",
+    "nota": "descarga"
+   }
+  ],
+  "decisiones": [
+   "D-016"
+  ],
+  "metodologia": 10,
+  "pedido": "referencia"
+ },
+ {
+  "id": "datos-calidad",
+  "pantalla": "general",
+  "titulo": "Hasta cuándo llegan los datos",
+  "queHace": "El encabezado dice el último mes utilizable. Detrás hay un control que no deja publicar si falta un mes.",
+  "comoSeCalcula": [
+   "Un mes final se descarta si los pozos que no declararon pesaban más del 10 % de la producción.",
+   "El build falla si falta un mes entero o si el total de la cuenca cae a menos del 60 % de sus meses vecinos.",
+   "Cada actualización mensual llega como un pedido de cambio para revisar."
+  ],
+  "linaje": [
+   "f_capiv",
+   "p_fetch_capiv",
+   "s_capiv",
+   "p_build",
+   "s_calidad"
+  ],
+  "codigo": [
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "last_complete_month",
+    "nota": "último mes utilizable"
+   },
+   {
+    "archivo": "pipeline/build_data.py",
+    "simbolo": "quality",
+    "nota": "controles"
+   },
+   {
+    "archivo": "pipeline/fetch_capiv.py",
+    "simbolo": "yearly_resources",
+    "nota": "qué archivo se usa para cada año"
+   },
+   {
+    "archivo": ".github/workflows/refresh-data.yml",
+    "nota": "actualización mensual"
+   },
+   {
+    "archivo": "pipeline/test_pipeline.py",
+    "simbolo": "PublishedDataTests",
+    "nota": "pruebas sobre lo publicado"
+   }
+  ],
+  "decisiones": [
+   "D-013",
+   "D-017",
+   "D-008"
+  ],
+  "metodologia": 3,
+  "pedido": "reclamo"
+ }
+]

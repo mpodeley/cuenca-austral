@@ -65,7 +65,7 @@ function Declinacion({ well, series }: { well: Well; series: SeriesFile | null }
   const unit = fluid === 'gas' ? 'Mm³/d' : 'm³/d'
   const ticks = rows?.filter(row => row.m.endsWith('-01') && Number(row.m.slice(0, 4)) % (narrow ? 5 : 2) === 0).map(row => row.m)
   return (
-    <Panel title={<>Declinación — <span style={{ ...mono, textTransform: 'none', color: C.text2 }}>{well.sigla}</span> ({unit})</>}>
+    <Panel como="pozo-declinacion" title={<>Declinación — <span style={{ ...mono, textTransform: 'none', color: C.text2 }}>{well.sigla}</span> ({unit})</>}>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 10 }}>
         <Seg label="Fluido:" value={fluid} onChange={setFluidChoice} options={[{ value: 'gas', label: 'Gas' }, { value: 'oil', label: 'Petróleo' }]} />
         <Seg label="Eje Y:" value={scale} onChange={setScale} options={[{ value: 'lin', label: 'Lineal' }, { value: 'log', label: 'Log' }]} />
@@ -105,7 +105,7 @@ function Ficha({ well, go }: { well: Well; go: (route: Route) => void }) {
   const info = well[fluid]
   const span = info ? info.eur_hi || 1 : 1
   return (
-    <Panel title="Ficha del pozo">
+    <Panel como="pozo-ficha" title="Ficha del pozo">
       <Field label="Empresa">{operatorName(well.empresa)}</Field>
       <Field label="Bloque"><button onClick={() => go({ tab: 'campo', id: well.area })} style={{ background: 'none', border: 0, padding: 0, color: '#60a5fa', ...mono }}>{title(well.area)} →</button></Field>
       <Field label="Yacimiento">{title(well.yacimiento) || '—'}</Field>
@@ -176,7 +176,7 @@ export function Pozos({ id, go }: { id?: string; go: (route: Route) => void }) {
         {selected ? <><Declinacion key={selected.id} well={selected} series={series.data} /><Ficha well={selected} go={go} /></> : <Panel><Empty>Ningún pozo coincide con los filtros.</Empty></Panel>}
       </div>
 
-      <Panel title={`Pozos — ${num(Math.min(PAGE, filtered.length))} de ${num(filtered.length)}`}>
+      <Panel como="pozo-tabla" title={`Pozos — ${num(Math.min(PAGE, filtered.length))} de ${num(filtered.length)}`}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: 12 }}>
           <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="sigla / empresa / bloque" aria-label="Buscar pozo" style={{ ...inputStyle, flex: '1 1 180px', maxWidth: 280 }} />
           <Seg value={status} onChange={setStatus} options={[{ value: 'productores', label: 'Produjeron' }, { value: 'activos', label: 'Activos' }, { value: 'todos', label: 'Todos' }]} />

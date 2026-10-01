@@ -1,0 +1,361 @@
+{
+ "columnas": [
+  {
+   "id": "fuentes",
+   "titulo": "Fuentes públicas",
+   "nota": "Lo que publica el Estado, tal cual"
+  },
+  {
+   "id": "pipeline",
+   "titulo": "Pipeline (Python)",
+   "nota": "Scripts que bajan y calculan"
+  },
+  {
+   "id": "store",
+   "titulo": "Datos versionados",
+   "nota": "Insumos compactos guardados en Git"
+  },
+  {
+   "id": "web",
+   "titulo": "Archivos web",
+   "nota": "Lo que baja el navegador"
+  },
+  {
+   "id": "navegador",
+   "titulo": "Cálculo en el navegador",
+   "nota": "Lo que se recalcula al mover un control"
+  },
+  {
+   "id": "pantallas",
+   "titulo": "Pantallas",
+   "nota": "Lo que ves"
+  }
+ ],
+ "nodos": [
+  {
+   "id": "f_capiv",
+   "col": "fuentes",
+   "titulo": "Producción por pozo",
+   "que": "Un CSV por año (2006–2026) con la producción mensual de cada pozo del país: unos 300 MB cada uno.",
+   "url": "https://datos.energia.gob.ar/dataset/produccion-de-petroleo-y-gas-por-pozo"
+  },
+  {
+   "id": "f_padron",
+   "col": "fuentes",
+   "titulo": "Padrón de pozos",
+   "que": "Listado de pozos con coordenadas, profundidad y estado, más el padrón de primera producción.",
+   "url": "https://datos.energia.gob.ar/dataset/produccion-de-petroleo-y-gas-por-pozo"
+  },
+  {
+   "id": "f_conc",
+   "col": "fuentes",
+   "titulo": "Concesiones",
+   "que": "Shapefile nacional con el polígono de cada concesión de explotación. No trae superficie ni cuenca.",
+   "url": "https://datos.energia.gob.ar/dataset/produccion-hidrocarburos-concesiones-de-explotacion"
+  },
+  {
+   "id": "f_cuenca",
+   "col": "fuentes",
+   "titulo": "Cuencas sedimentarias",
+   "que": "Contorno oficial de la Cuenca Austral.",
+   "url": "https://datos.energia.gob.ar/dataset/exploracion-hidrocarburos-cuencas-sedimentarias"
+  },
+  {
+   "id": "f_ne",
+   "col": "fuentes",
+   "titulo": "Natural Earth",
+   "que": "Tierra firme y límite internacional, de dominio público. Reemplaza a un mapa base de teselas.",
+   "url": "https://www.naturalearthdata.com/"
+  },
+  {
+   "id": "p_fetch_capiv",
+   "col": "pipeline",
+   "titulo": "fetch_capiv.py",
+   "que": "Lee cada CSV anual por streaming, se queda con las filas de la cuenca y suma por pozo y mes.",
+   "archivo": "pipeline/fetch_capiv.py",
+   "simbolo": "stream_year"
+  },
+  {
+   "id": "p_fetch_geo",
+   "col": "pipeline",
+   "titulo": "fetch_geo.py",
+   "que": "Baja pozos, concesiones, cuenca y costa; calcula superficies y recorta la costa a la región.",
+   "archivo": "pipeline/fetch_geo.py",
+   "simbolo": "main"
+  },
+  {
+   "id": "p_arps",
+   "col": "pipeline",
+   "titulo": "arps.py",
+   "que": "El modelo de declinación: ajuste, proyección y EUR con banda. Los supuestos son constantes al principio del archivo.",
+   "archivo": "pipeline/arps.py",
+   "simbolo": "fit"
+  },
+  {
+   "id": "p_build",
+   "col": "pipeline",
+   "titulo": "build_data.py",
+   "que": "Arma todo lo que consume la web: pozos, bloques, pozos tipo y base del pronóstico. Corta con error si falta un mes.",
+   "archivo": "pipeline/build_data.py",
+   "simbolo": "main"
+  },
+  {
+   "id": "s_capiv",
+   "col": "store",
+   "titulo": "capiv_austral.json.gz",
+   "que": "Toda la producción mensual de la cuenca en 2,6 MB. Evita volver a bajar 6 GB.",
+   "archivo": "data/store/capiv_austral.json.gz"
+  },
+  {
+   "id": "s_geo",
+   "col": "store",
+   "titulo": "geo/",
+   "que": "Pozos, concesiones, cuenca y contexto ya recortados.",
+   "archivo": "data/store/geo"
+  },
+  {
+   "id": "s_calidad",
+   "col": "store",
+   "titulo": "quality-report + manifest",
+   "que": "Qué controles pasaron y de qué archivo oficial salió cada año.",
+   "archivo": "data/processed/quality-report.md"
+  },
+  {
+   "id": "w_blocks",
+   "col": "web",
+   "titulo": "blocks.json",
+   "que": "Una ficha por bloque: pozos, producción, EUR, etapa. 39 kB.",
+   "archivo": "public/data/blocks.json"
+  },
+  {
+   "id": "w_geo",
+   "col": "web",
+   "titulo": "concesiones + contexto",
+   "que": "Polígonos de concesiones, costa y contorno de cuenca.",
+   "archivo": "public/data/concesiones_austral.json"
+  },
+  {
+   "id": "w_wells",
+   "col": "web",
+   "titulo": "wells.json / .csv",
+   "que": "Un registro por pozo con su ajuste y su EUR. Se baja después del mapa base.",
+   "archivo": "public/data/wells.json"
+  },
+  {
+   "id": "w_series",
+   "col": "web",
+   "titulo": "well_series.json",
+   "que": "La tasa de cada mes de cada pozo. Es el archivo más pesado: se baja sólo cuando un gráfico lo necesita.",
+   "archivo": "public/data/well_series.json"
+  },
+  {
+   "id": "w_forecast",
+   "col": "web",
+   "titulo": "forecast.json",
+   "que": "Por bloque: historia, base declinante a 20 años y pozo tipo.",
+   "archivo": "public/data/forecast.json"
+  },
+  {
+   "id": "n_mapa",
+   "col": "navegador",
+   "titulo": "BasinMap.tsx",
+   "que": "El mapa SVG: proyección, paneo, zoom y qué hay bajo el cursor.",
+   "archivo": "src/components/BasinMap.tsx",
+   "simbolo": "BasinMap"
+  },
+  {
+   "id": "n_tipo",
+   "col": "navegador",
+   "titulo": "typeCurve.ts",
+   "que": "Pozo tipo en vivo: percentiles por mes en producción.",
+   "archivo": "src/utils/typeCurve.ts",
+   "simbolo": "computeTypeCurve"
+  },
+  {
+   "id": "n_arps",
+   "col": "navegador",
+   "titulo": "arps.ts",
+   "que": "Evalúa la curva ya ajustada. El navegador no ajusta: sólo dibuja.",
+   "archivo": "src/utils/arps.ts",
+   "simbolo": "project"
+  },
+  {
+   "id": "n_forecast",
+   "col": "navegador",
+   "titulo": "forecast.ts",
+   "que": "El motor del pronóstico: cronograma de pozos nuevos y su producción.",
+   "archivo": "src/utils/forecast.ts",
+   "simbolo": "runForecast"
+  },
+  {
+   "id": "v_mapa",
+   "col": "pantallas",
+   "titulo": "Mapa",
+   "que": "Concesiones y pozos.",
+   "archivo": "src/components/Mapa.tsx",
+   "simbolo": "Mapa",
+   "ruta": "mapa"
+  },
+  {
+   "id": "v_campo",
+   "col": "pantallas",
+   "titulo": "Yacimiento",
+   "que": "Ficha por campo u operadora.",
+   "archivo": "src/components/Campos.tsx",
+   "simbolo": "Campos",
+   "ruta": "campo"
+  },
+  {
+   "id": "v_pozos",
+   "col": "pantallas",
+   "titulo": "Pozos",
+   "que": "Declinación, ficha y tabla.",
+   "archivo": "src/components/Pozos.tsx",
+   "simbolo": "Pozos",
+   "ruta": "pozos"
+  },
+  {
+   "id": "v_pron",
+   "col": "pantallas",
+   "titulo": "Pronóstico",
+   "que": "Escenarios de cuenca y campo.",
+   "archivo": "src/components/Pronostico.tsx",
+   "simbolo": "Pronostico",
+   "ruta": "pronostico"
+  }
+ ],
+ "aristas": [
+  [
+   "f_capiv",
+   "p_fetch_capiv"
+  ],
+  [
+   "p_fetch_capiv",
+   "s_capiv"
+  ],
+  [
+   "s_capiv",
+   "p_build"
+  ],
+  [
+   "f_padron",
+   "p_fetch_geo"
+  ],
+  [
+   "f_conc",
+   "p_fetch_geo"
+  ],
+  [
+   "f_cuenca",
+   "p_fetch_geo"
+  ],
+  [
+   "f_ne",
+   "p_fetch_geo"
+  ],
+  [
+   "p_fetch_geo",
+   "s_geo"
+  ],
+  [
+   "s_geo",
+   "p_build"
+  ],
+  [
+   "p_arps",
+   "p_build"
+  ],
+  [
+   "p_build",
+   "s_calidad"
+  ],
+  [
+   "p_build",
+   "w_blocks"
+  ],
+  [
+   "p_build",
+   "w_geo"
+  ],
+  [
+   "p_build",
+   "w_wells"
+  ],
+  [
+   "p_build",
+   "w_series"
+  ],
+  [
+   "p_build",
+   "w_forecast"
+  ],
+  [
+   "w_geo",
+   "n_mapa"
+  ],
+  [
+   "w_wells",
+   "n_mapa"
+  ],
+  [
+   "w_series",
+   "n_tipo"
+  ],
+  [
+   "w_series",
+   "n_arps"
+  ],
+  [
+   "w_wells",
+   "n_arps"
+  ],
+  [
+   "w_forecast",
+   "n_forecast"
+  ],
+  [
+   "n_mapa",
+   "v_mapa"
+  ],
+  [
+   "n_mapa",
+   "v_campo"
+  ],
+  [
+   "w_blocks",
+   "v_mapa"
+  ],
+  [
+   "w_blocks",
+   "v_campo"
+  ],
+  [
+   "w_blocks",
+   "v_pron"
+  ],
+  [
+   "w_wells",
+   "v_campo"
+  ],
+  [
+   "w_wells",
+   "v_pozos"
+  ],
+  [
+   "w_forecast",
+   "v_campo"
+  ],
+  [
+   "n_tipo",
+   "v_campo"
+  ],
+  [
+   "n_arps",
+   "v_pozos"
+  ],
+  [
+   "n_forecast",
+   "v_pron"
+  ]
+ ]
+}

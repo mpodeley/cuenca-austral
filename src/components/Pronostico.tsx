@@ -107,7 +107,7 @@ export function Pronostico({ go }: { go: (route: Route) => void }) {
 
   return (
     <>
-      <Panel title="Escenario">
+      <Panel como="pron-escenario" title="Escenario">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
           <Seg value={fluid} onChange={setFluid} options={[{ value: 'gas', label: 'Gas' }, { value: 'oil', label: 'Petróleo' }]} />
           <Seg value={preset} onChange={choose} options={PRESET_KEYS.map(key => ({ value: key, label: PRESETS[key].titulo }))} />
@@ -124,7 +124,7 @@ export function Pronostico({ go }: { go: (route: Route) => void }) {
         </div>
       </Panel>
 
-      <KpiGrid>
+      <KpiGrid como="pron-indicadores">
         <Kpi label="Producción actual" value={rate(fluid, model.now)} color={color} sub="promedio de los últimos 3 meses" />
         <Kpi label="Base sin perforar +5a" value={rate(fluid, model.base5)} sub={`${num((model.base5 / model.now - 1) * 100)} % vs hoy`} />
         <Kpi label={`${PRESETS[preset].titulo} +5a`} value={rate(fluid, model.total5)} color={C.blue} sub={`${num((model.total5 / model.now - 1) * 100)} % vs hoy`} />
@@ -132,7 +132,7 @@ export function Pronostico({ go }: { go: (route: Route) => void }) {
         <Kpi label="Pozos nuevos en 5 años" value={num(model.wells5)} sub={`${volume(fluid, model.cum20)} en 20 años`} />
       </KpiGrid>
 
-      <Panel title={`${view ? title(view) : 'Cuenca'} — escenario ${PRESETS[preset].titulo} (${model.unit})`}>
+      <Panel como="pron-grafico" title={`${view ? title(view) : 'Cuenca'} — escenario ${PRESETS[preset].titulo} (${model.unit})`}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: 10 }}>
           <label style={{ fontSize: 12, color: C.muted }}>Ver campo:{' '}
             <select value={view} onChange={event => setView(event.target.value)} style={selectStyle}>
@@ -157,7 +157,7 @@ export function Pronostico({ go }: { go: (route: Route) => void }) {
         <div style={{ marginTop: 8 }}><Legend items={[{ color: C.gray, label: 'histórico' }, { color, label: 'base: pozos actuales en declinación' }, { color: C.blue, label: 'pozos nuevos' }, { color: C.muted, label: 'otros presets (línea punteada)' }]} /></div>
       </Panel>
 
-      <Collapse title="Ajustar los supuestos" open>
+      <Collapse como="pron-supuestos" title="Ajustar los supuestos" open>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px 24px', alignItems: 'end' }}>
           <Slider label="Actividad de perforación" value={scenario.actividad} min={0} max={3} step={0.05} preset={base.actividad} onChange={value => set({ actividad: value })} format={value => `×${num(value, 2)} del ritmo histórico`} />
           <Slider label="Crecimiento de la actividad" value={scenario.crecimiento} min={0} max={50} step={1} preset={base.crecimiento} onChange={value => set({ crecimiento: value, tope: Math.max(scenario.tope, value ? 1.5 : 1) })} format={value => `${num(value)} %/año`} />
@@ -171,7 +171,7 @@ export function Pronostico({ go }: { go: (route: Route) => void }) {
         </p>
       </Collapse>
 
-      <Panel title="Actividad de perforación — histórico + plan" note="Pozos que entran en producción por año. El plan es un valor esperado: puede no ser entero.">
+      <Panel como="pron-actividad" title="Actividad de perforación — histórico + plan" note="Pozos que entran en producción por año. El plan es un valor esperado: puede no ser entero.">
         <ResponsiveContainer width="100%" height={220}>
           <ComposedChart data={model.activity} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
@@ -184,7 +184,7 @@ export function Pronostico({ go }: { go: (route: Route) => void }) {
         </ResponsiveContainer>
       </Panel>
 
-      <Panel title="Programa campo por campo (editable)" note={`Sólo perforan los campos cuyo fluido principal es ${FLUID_LABEL[fluid].toLowerCase()} y que tienen pozo tipo. Editá el ritmo o el inventario de un campo para pisar el supuesto general.`}>
+      <Panel como="pron-programa" title="Programa campo por campo (editable)" note={`Sólo perforan los campos cuyo fluido principal es ${FLUID_LABEL[fluid].toLowerCase()} y que tienen pozo tipo. Editá el ritmo o el inventario de un campo para pisar el supuesto general.`}>
         <div className="scroll-x">
           <table>
             <thead>

@@ -1,12 +1,21 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { C, card, mono } from '../theme'
 import { useNarrow } from '../hooks/useViewport'
+import { ComoBoton } from '../didactica/Drawer'
+import { useDidactica } from '../didactica/Contexto'
 
-export function Panel({ title, note, accent, children, style }: { title?: ReactNode; note?: ReactNode; accent?: string; children: ReactNode; style?: CSSProperties }) {
+/** ``como`` es el id del módulo en el registro didáctico: agrega el botón «cómo se hizo». */
+export function Panel({ title, note, accent, children, style, como }: { title?: ReactNode; note?: ReactNode; accent?: string; children: ReactNode; style?: CSSProperties; como?: string }) {
   const narrow = useNarrow()
+  const { clase } = useDidactica()
   return (
-    <section style={{ ...card, padding: narrow ? 12 : 20, borderLeft: accent ? `3px solid ${accent}` : card.border, ...style }}>
-      {title && <h3 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: C.muted, marginBottom: note ? 4 : 12, fontWeight: 500 }}>{title}</h3>}
+    <section data-como={como} style={{ ...card, padding: narrow ? 12 : 20, borderLeft: accent ? `3px solid ${accent}` : card.border, ...(como && clase ? { outline: `1px dashed ${C.orange}88`, outlineOffset: 3 } : {}), ...style }}>
+      {(title || como) && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 10, marginBottom: note ? 4 : 12 }}>
+          <h3 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: C.muted, fontWeight: 500 }}>{title}</h3>
+          {como && <ComoBoton id={como} />}
+        </div>
+      )}
       {note && <p style={{ margin: '0 0 12px', fontSize: 12, color: C.dim, lineHeight: 1.5 }}>{note}</p>}
       {children}
     </section>
@@ -23,9 +32,15 @@ export function Kpi({ label, value, sub, color }: { label: string; value: ReactN
   )
 }
 
-export const KpiGrid = ({ children }: { children: ReactNode }) => (
-  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>{children}</div>
-)
+export function KpiGrid({ children, como }: { children: ReactNode; como?: string }) {
+  const { clase } = useDidactica()
+  return (
+    <div data-como={como} style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, ...(como && clase ? { outline: `1px dashed ${C.orange}88`, outlineOffset: 3, borderRadius: 12 } : {}) }}>
+      {children}
+      {como && <span style={{ position: 'absolute', top: 8, right: 8 }}><ComoBoton id={como} /></span>}
+    </div>
+  )
+}
 
 /** Control segmentado: una opción activa entre pocas. */
 export function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: Array<{ value: T; label: string }>; onChange: (value: T) => void; label?: string }) {
@@ -48,10 +63,11 @@ export function Pill({ color = C.muted, children }: { color?: string; children: 
   return <span style={{ display: 'inline-block', background: `${color}22`, color, borderRadius: 999, padding: '2px 9px', fontSize: 11.5, whiteSpace: 'nowrap' }}>{children}</span>
 }
 
-export function Collapse({ title, children, open }: { title: ReactNode; children: ReactNode; open?: boolean }) {
+export function Collapse({ title, children, open, como }: { title: ReactNode; children: ReactNode; open?: boolean; como?: string }) {
+  const { clase } = useDidactica()
   return (
-    <details open={open} style={{ ...card, padding: 0 }}>
-      <summary style={{ padding: '14px 20px', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: C.muted }}>{title}</summary>
+    <details data-como={como} open={open} style={{ ...card, padding: 0, ...(como && clase ? { outline: `1px dashed ${C.orange}88`, outlineOffset: 3 } : {}) }}>
+      <summary style={{ padding: '14px 20px', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: C.muted }}>{title}{como && <span style={{ float: 'right' }}><ComoBoton id={como} /></span>}</summary>
       <div style={{ padding: '0 20px 20px' }}>{children}</div>
     </details>
   )

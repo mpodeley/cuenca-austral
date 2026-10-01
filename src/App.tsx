@@ -5,6 +5,9 @@ import { useBlocks } from './hooks/useData'
 import { useNarrow } from './hooks/useViewport'
 import { C, mono } from './theme'
 import { monthLabel } from './utils/format'
+import { DidacticaProvider, useDidactica } from './didactica/Contexto'
+import { ComoBoton, Drawer } from './didactica/Drawer'
+import { REPO } from './didactica/registro'
 
 // Sólo el mapa va en el bundle inicial; el resto (y la librería de gráficos) se baja al abrir cada pestaña.
 const Campos = lazy(() => import('./components/Campos').then(module => ({ default: module.Campos })))
@@ -13,7 +16,6 @@ const Pozos = lazy(() => import('./components/Pozos').then(module => ({ default:
 const Metodologia = lazy(() => import('./components/Metodologia').then(module => ({ default: module.Metodologia })))
 const ComoSeHizo = lazy(() => import('./components/ComoSeHizo').then(module => ({ default: module.ComoSeHizo })))
 
-export const REPO = 'https://github.com/mpodeley/cuenca-austral'
 
 export type Tab = 'mapa' | 'campo' | 'operadora' | 'pronostico' | 'pozos' | 'metodologia' | 'como-se-hizo'
 export interface Route { tab: Tab; id?: string }
@@ -26,7 +28,7 @@ const KNOWN: Tab[] = ['mapa', 'campo', 'operadora', 'pronostico', 'pozos', 'meto
 
 export function parseRoute(hash: string): Route {
   // Algunos nombres de concesión traen "/": el id es todo lo que sigue a la pestaña, decodificado por segmento.
-  const [tab, ...rest] = hash.replace(/^#\/?/, '').split('/')
+  const [tab, ...rest] = hash.split('?')[0].replace(/^#\/?/, '').split('/')
   if (!KNOWN.includes(tab as Tab)) return { tab: 'mapa' }
   const id = rest.map(decodeURIComponent).join('/')
   return id ? { tab: tab as Tab, id } : { tab: tab as Tab }
@@ -37,7 +39,12 @@ export function routeHash(route: Route): string {
 }
 
 export function App() {
+  return <DidacticaProvider><Shell /></DidacticaProvider>
+}
+
+function Shell() {
   const narrow = useNarrow()
+  const { clase, setClase, cerrar } = useDidactica()
   const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash))
   const blocks = useBlocks()
 
@@ -49,23 +56,29 @@ export function App() {
   }, [])
 
   const go = useCallback((next: Route) => {
+    cerrar()
     window.history.pushState(null, '', routeHash(next))
     setRoute(next)
     window.scrollTo({ top: 0 })
-  }, [])
+  }, [cerrar])
 
   const active: Tab = route.tab === 'operadora' ? 'campo' : route.tab
   return (
     <div style={{ maxWidth: 1240, margin: '0 auto', padding: narrow ? '0 12px 80px' : '0 20px 80px' }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 50, background: C.bg, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', fontSize: 12, borderBottom: `1px solid ${C.border}` }}>
-        <span style={{ color: C.muted }}>Curso de IA aplicada a energía · una app hecha con agentes de código</span>
-        <a href={REPO} target="_blank" rel="noreferrer" style={{ ...mono, color: C.muted, textDecoration: 'none', whiteSpace: 'nowrap' }}>GitHub ↗</a>
+        <span style={{ color: C.muted }}>{narrow ? 'Curso de IA aplicada a energía' : 'Curso de IA aplicada a energía · una app hecha con agentes de código'}</span>
+        <span style={{ display: 'inline-flex', gap: 14, alignItems: 'center' }}>
+          <label title="Resalta cada módulo y muestra los botones «cómo se hizo»" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', color: clase ? C.orange : C.muted, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={clase} onChange={event => setClase(event.target.checked)} style={{ accentColor: C.orange }} />Modo clase
+          </label>
+          <a href={REPO} target="_blank" rel="noreferrer" style={{ ...mono, color: C.muted, textDecoration: 'none', whiteSpace: 'nowrap' }}>GitHub ↗</a>
+        </span>
       </div>
 
       <header style={{ padding: '22px 0 14px' }}>
         <h1 style={{ fontSize: narrow ? 24 : 32, fontWeight: 700, color: C.text }}>Cuenca Austral, pozo por pozo</h1>
         <p style={{ margin: '6px 0 0', fontSize: 11.5, color: C.dim }}>
-          Datos públicos de la Secretaría de Energía (Capítulo IV){blocks.sourceDate ? ` · al ${monthLabel(blocks.sourceDate)}` : ''}
+          Datos públicos de la Secretaría de Energía (Capítulo IV){blocks.sourceDate ? ` · al ${monthLabel(blocks.sourceDate)}` : ''} <ComoBoton id="datos-calidad" small />
         </p>
       </header>
 
@@ -87,8 +100,8 @@ export function App() {
           {(route.tab === 'campo' || route.tab === 'operadora') && <Campos mode={route.tab} id={route.id} go={go} />}
           {route.tab === 'pronostico' && <Pronostico go={go} />}
           {route.tab === 'pozos' && <Pozos id={route.id} go={go} />}
-          {route.tab === 'metodologia' && <Metodologia />}
-          {route.tab === 'como-se-hizo' && <ComoSeHizo go={go} />}
+          {route.tab === 'metodologia' && <Metodologia id={route.id} />}
+          {route.tab === 'como-se-hizo' && <ComoSeHizo sub={route.id} go={go} />}
         </Suspense>
       </main>
 
@@ -98,6 +111,7 @@ export function App() {
           Curvas de declinación Arps con declinación terminal mínima; EUR, pozos tipo y pronósticos son estimaciones con fines didácticos y analíticos, no certificaciones de reservas.
         </p>
       </footer>
+      <Drawer go={go} />
     </div>
   )
 }
