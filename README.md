@@ -1,96 +1,102 @@
 # Cuenca Austral, pozo por pozo
 
-Aplicación educativa y auditable sobre concesiones, pozos y producción de gas en la Cuenca Austral argentina. Convierte datos públicos en un mapa interactivo, fichas por bloque, pozos tipo y pronósticos editables.
+Aplicación educativa y auditable sobre concesiones, pozos y producción de gas y petróleo en la Cuenca Austral argentina. Convierte datos públicos en un mapa, una ficha por bloque, la declinación de cada pozo, pozos tipo y un pronóstico con supuestos editables.
 
-> El repositorio se construyó desde cero como material de un curso de IA aplicada a energía. La aplicación no reemplaza evaluaciones técnicas, económicas ni de reservas.
+**Sitio:** https://mpodeley.github.io/cuenca-austral/
 
-Si no programás, empezá por [COURSE.md](COURSE.md): explica cómo se dirigió y revisó al agente sin exigir conocimientos de código. Las decisiones del proyecto están en [DECISIONS.md](DECISIONS.md).
+> El repositorio es material de un curso de IA aplicada a energía y se construyó conversando con agentes de código. La aplicación no reemplaza evaluaciones técnicas, económicas ni de reservas.
 
-## Estado
+Si no programás, empezá por [COURSE.md](COURSE.md): cuenta cómo se dirigió y revisó a los agentes, incluida una primera versión que no cumplía el pedido y cómo se corrigió. Las decisiones están en [DECISIONS.md](DECISIONS.md).
 
-La versión publicada usa datos oficiales procesados: **65 áreas, 3.236 pozos y 487.813 registros mensuales**, con corte en julio de 2026. El control de calidad y la cobertura exacta están en [`data/processed/quality-report.md`](data/processed/quality-report.md).
+## Qué tiene
 
-Para que GitHub Pages cargue con agilidad, el JSON web conserva los últimos 60 registros de cada pozo; los acumulados de las fichas se calculan con todo el histórico descargado (2006–2026). El modo sintético continúa disponible sólo para desarrollar y enseñar fallas de fuentes, siempre rotulado como demostrativo.
+| Pestaña | Contenido |
+| --- | --- |
+| Mapa | Concesiones y pozos sobre la costa y el contorno de cuenca. Bloques coloreables por producción, EUR, agotamiento o actividad; pozos por estado, fluido, campaña, ambiente o tipo |
+| Yacimiento | Ficha por campo o por operadora: indicadores, mapa, historia de producción, actividad por campaña, pozo tipo con banda P90–P10 y distribución de EUR |
+| Pronóstico | Cuenca o campo: base declinante más pozos nuevos, tres escenarios, supuestos editables, programa campo por campo y descarga CSV |
+| Pozos | Tabla buscable y ordenable, declinación con ajuste de Arps y banda, ficha del pozo y descarga CSV |
+| Metodología | Cada regla de cálculo, con sus umbrales y limitaciones |
+| Cómo se hizo | El proceso, lo que salió mal y los enlaces para auditar |
+
+## Estado de los datos
+
+**65 áreas, 3.236 pozos y 699.366 registros pozo-mes, de enero de 2006 a agosto de 2026, sin meses faltantes.** El control de calidad está en [`data/processed/quality-report.md`](data/processed/quality-report.md) y el origen de cada año en [`data/processed/manifest.json`](data/processed/manifest.json).
 
 ## Inicio rápido
 
-Requisitos: Node.js 22 o posterior y Python 3.11 o posterior.
+Requisitos: Node.js 22 o posterior. Los datos procesados ya están en el repositorio.
 
 ```bash
 npm install
-npm run data:demo
 npm run dev
 ```
 
 La ruta local es `http://localhost:5173/cuenca-austral/`.
 
-Para procesar el catálogo oficial:
+Para rehacer los datos hace falta Python 3.11 o posterior:
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-npm run data:update
+.venv/bin/python -m pipeline.fetch_capiv     # producción; la primera vez baja ~6 GB por streaming
+.venv/bin/python -m pipeline.fetch_geo       # pozos, concesiones, cuenca y costa
+.venv/bin/python -m pipeline.build_data      # ajustes, fichas, pozos tipo y control de calidad
 ```
 
-El comando falla de manera explícita si cambia el catálogo, falta un campo crítico o no encuentra registros válidos. Nunca reemplaza silenciosamente datos oficiales con el dataset demostrativo.
+`fetch_capiv` sólo vuelve a bajar el año en curso y el anterior; `--all` revisa todos los años cuyo archivo haya cambiado. `build_data` falla si falta un mes o si el total de la cuenca cae abruptamente.
 
 ## Fuentes públicas
 
-- [Producción de petróleo y gas por pozo — Capítulo IV](https://datos.gob.ar/dataset/energia-produccion-petroleo-gas-por-pozo-capitulo-iv)
-- [Concesiones de explotación](https://datos.gob.ar/dataset/energia-produccion-hidrocarburos---concesiones-explotacion)
-- [Cuencas sedimentarias](https://datos.gob.ar/dataset/energia-exploracion-hidrocarburos-cuencas-sedimentarias)
-- [Información geográfica de la Secretaría de Energía](https://www.argentina.gob.ar/economia/energia/planeamiento-energetico/informacion-energetica/sistema-unificado-de-informacion-2)
-- [Trayectorias de pozos (publicación histórica)](https://datos.gob.ar/dataset/energia-produccion-hidrocarburos---trayectorias-pozos)
+- [Producción de petróleo y gas por pozo — Capítulo IV](https://datos.energia.gob.ar/dataset/produccion-de-petroleo-y-gas-por-pozo): producción mensual, padrón de pozos con coordenadas y padrón de primera producción.
+- [Concesiones de explotación](https://datos.energia.gob.ar/dataset/produccion-hidrocarburos-concesiones-de-explotacion): polígonos.
+- [Cuencas sedimentarias](https://datos.energia.gob.ar/dataset/exploracion-hidrocarburos-cuencas-sedimentarias): contorno de la cuenca.
+- [Natural Earth](https://www.naturalearthdata.com/) (dominio público): tierra firme y límite internacional.
 
 Las declaraciones de producción pueden ser provisorias. El código tiene licencia MIT; los datos conservan las condiciones y atribución de sus organismos publicadores. Véase [DATA.md](DATA.md).
 
 ## Trazabilidad
 
-`config/sources.json` declara fuentes, unidades y filtros. El pipeline guarda las descargas en `data/raw/`, que no se versiona, y publica:
-
 | Archivo | Contenido |
 | --- | --- |
-| `public/data/dataset.json` | Contrato compacto que consume la aplicación |
-| `data/processed/wells.csv` | Padrón normalizado de pozos |
-| `data/processed/manifest.json` | Fuentes, checksums, versión y supuestos |
-| `data/processed/quality-report.*` | Conteos, cobertura y controles de calidad |
+| `data/store/capiv_austral.json.gz` | Producción mensual por pozo de toda la cuenca, compacta |
+| `data/store/geo/` | Pozos, concesiones, cuenca y contexto geográfico |
+| `public/data/blocks.json` | Ficha de cada bloque y supuestos del cálculo |
+| `public/data/wells.json`, `wells.csv` | Un registro por pozo: atributos, ajuste de Arps y EUR |
+| `public/data/well_series.json` | Tasas mensuales de cada pozo |
+| `public/data/forecast.json` | Historia, base declinante y pozo tipo por bloque |
+| `public/data/concesiones_austral.json`, `contexto.json` | Geometría del mapa |
+| `data/processed/quality-report.*`, `manifest.json` | Controles, cobertura y origen de cada año |
 
-Los identificadores internos son hashes determinísticos de los identificadores oficiales. Las coordenadas se validan contra límites argentinos y quedan en EPSG:4326. Cuando una geometría oficial no puede cruzarse, el pipeline usa una envolvente derivada de los pozos y lo registra como supuesto.
+Los CSV crudos no se versionan (pesan unos 6 GB); sí el store compacto que se arma con ellos.
 
-La capa de trayectorias se publica vacía de forma deliberada: el recurso nacional histórico dejó de responder y el dataset vigente encontrado cubre Vaca Muerta, no Austral. Se muestra esta ausencia en la aplicación en vez de dibujar trayectorias ficticias.
+## Metodología en una página
 
-## Metodología de pronóstico
+1. Tasas por día calendario: volumen del mes dividido por sus días.
+2. Arps hiperbólica `q(t) = qi / (1 + b·Di·t)^(1/b)` desde el pico, con `b ≤ 1`; se descarta con menos de 12 meses o R² menor que 0,30.
+3. EUR = acumulada desde 2006 + cola con declinación terminal de 8 % anual, límite económico y 30 años como máximo. Banda por Monte Carlo sobre el ajuste.
+4. Pozo tipo: percentiles por mes en producción de los pozos cuyo arranque se observa; mínimo 8 pozos.
+5. Pronóstico: cada pozo activo sigue su curva (base) y cada campo suma pozos nuevos iguales a su pozo tipo, al ritmo del escenario.
 
-1. Se alinean los pozos por primer mes con producción positiva de gas.
-2. La tasa mensual se divide por días productivos; si no están informados, se usan 30,4375 días.
-3. Solo ingresan al pozo tipo series con al menos 12 meses. La interfaz alerta cuando hay menos de 10 pozos elegibles.
-4. La curva central es la mediana mensual de tasas. El ajuste minimiza el error cuadrático en `log(1 + q)`.
-5. Se usa Arps hiperbólico:
-
-   `q(t) = qi / (1 + b · Di · t)^(1/b)`
-
-6. Cuando la declinación efectiva alcanza 5% anual, continúa exponencialmente. El horizonte es de 20 años.
-7. El pronóstico de bloque suma una declinación base de 12% anual y las altas definidas por el usuario. Por defecto hay cero pozos futuros.
-
-Las bandas baja y alta son multiplicadores didácticos de 0,75× y 1,25× sobre la curva central; no son categorías de reservas ni probabilidades certificadas. Esta limitación se mantiene visible en el repositorio y será reemplazable por percentiles empíricos cuando la muestra oficial sea suficiente.
+El detalle completo, con limitaciones, está en la pestaña Metodología de la app (`src/components/Metodologia.tsx`).
 
 ## Desarrollo y validación
 
 ```bash
-python3 -m unittest pipeline.test_pipeline
+.venv/bin/python -m unittest pipeline.test_pipeline
 npm test
 npm run build
 ```
 
-Los workflows ejecutan estos controles en cada cambio, publican `dist/` en GitHub Pages y abren mensualmente un pull request si cambian los datos oficiales.
+Los workflows corren estos controles en cada cambio, publican `dist/` en GitHub Pages al integrar en `main` y abren cada mes un pull request con los datos nuevos.
 
 ## Estructura
 
 ```text
-config/             fuentes, filtros y unidades
-pipeline/           descarga, normalización, QA y fixtures
-data/processed/     evidencia versionada
-public/data/         artefacto consumido por la web
-src/                 aplicación, mapa y modelos
+pipeline/           descarga, cálculo y control de calidad (Python)
+data/store/         insumos compactos versionados
+data/processed/     reporte de calidad y manifiesto
+public/data/        archivos que consume la web
+src/                aplicación: pestañas, mapa SVG y modelo de pronóstico
 .github/workflows/  CI, Pages y actualización mensual
 ```

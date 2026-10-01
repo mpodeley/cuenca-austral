@@ -1,7 +1,7 @@
 {
   "name": "cuenca-austral",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,18 +9,20 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "data:demo": "python3 pipeline/build_data.py --demo",
-    "data:update": "python3 pipeline/build_data.py"
+    "data:fetch": "python3 -m pipeline.fetch_capiv && python3 -m pipeline.fetch_geo",
+    "data:build": "python3 -m pipeline.build_data"
   },
   "dependencies": {
-    "maplibre-gl": "^6.11.2",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "recharts": "^2.15.4"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
-    "@types/geojson": "^7946.0.16",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.4",

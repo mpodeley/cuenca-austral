@@ -19,7 +19,9 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install -r requirements.txt
-      - run: python pipeline/build_data.py
+      - run: python -m pipeline.fetch_capiv
+      - run: python -m pipeline.fetch_geo
+      - run: python -m pipeline.build_data
       - run: python -m unittest pipeline.test_pipeline
       - name: Crear PR si hay cambios
         env:
@@ -33,7 +35,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
-          git add data/processed public/data
+          git add data/store data/processed public/data
           git commit -m "data: actualizar fuentes oficiales"
           git push origin "$branch"
           gh pr create --title "data: actualización mensual" --body "Actualización automática. Revisar manifest y reporte de calidad antes de integrar." --base main --head "$branch"

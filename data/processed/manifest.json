@@ -175,37 +175,37 @@
   "outputs": [
     {
       "path": "public/data/blocks.json",
-      "bytes": 39952,
-      "sha256": "30410f7cb3976aae17b34e535c48d05bcf01f6d924068ca01023fa4728beb8f4"
+      "bytes": 39959,
+      "sha256": "8140eec60b768ab395884c723db64417f4034a5cab4a66c293850a10cb007ed3"
     },
     {
       "path": "public/data/concesiones_austral.json",
       "bytes": 55574,
-      "sha256": "719183b61077ee3158950204c7017ae101677c7492634490412101e3a1129e7b"
+      "sha256": "47d6741a5d66fc525d544fbe9ab736c2ed373abafc2c1dc6ae837397badd236a"
     },
     {
       "path": "public/data/contexto.json",
       "bytes": 187065,
-      "sha256": "c2916b4796d704654ca56b8ba59da5e24ea402631df6b49e1095af2ed05398f2"
+      "sha256": "cc178885c051b2dce75577a26798d639973f06c24039da3978c3135ef3fc63be"
     },
     {
       "path": "public/data/wells.json",
-      "bytes": 2219036,
-      "sha256": "0d045aa136794050a3d17414629aa2f88e1bfa41aef096b28133c32650bf02d3"
+      "bytes": 2223570,
+      "sha256": "bfda4de8c3e832f3b0ad0c589be9836ab9d4acb527d1aae0061af2c4332638b3"
     },
     {
       "path": "public/data/well_series.json",
       "bytes": 3480634,
-      "sha256": "46c709313dd7d39c520e20d4512a240621e76c52555d2c9d357cad3e982dce2f"
+      "sha256": "f0b76446bbb798a7cc90921bf657eec2c7300493593f1ac47291fe8e842a8571"
     },
     {
       "path": "public/data/forecast.json",
-      "bytes": 576016,
-      "sha256": "684f3141aed2df28bff3753bfa76fd877b087989e9510e6152b99cd524fde415"
+      "bytes": 573703,
+      "sha256": "d7d088416560e005f0ec62938e9846967dc59f5b3c9cd3f841b694be0940c6c0"
     },
     {
       "path": "public/data/wells.csv",
-      "bytes": 1069381
+      "bytes": 1072367
     }
   ]
 }

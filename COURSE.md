@@ -44,23 +44,40 @@ Un pedido débil se limita a “hacelo lindo” o enumera tecnologías sin expli
 Una persona no programadora puede verificar:
 
 - La app abre y los controles hacen lo que describen.
-- El badge distingue datos oficiales de demostrativos.
-- `manifest.json` enumera fuentes y huellas digitales.
+- El encabezado dice hasta qué mes llegan los datos.
+- `manifest.json` dice de qué archivo oficial salió cada año.
 - `quality-report.md` informa cuántos registros pasaron los controles.
 - La pestaña Actions de GitHub muestra pruebas verdes o errores concretos.
 - El historial de commits cuenta una secuencia comprensible.
 - Un cambio de supuesto aparece en `DECISIONS.md` o `DATA.md`.
 
-## 5. Guardrails usados
+## 5. Cuando el resultado no es lo que se pidió
 
-- Directorio y repositorio nuevos; no se reutilizaron otros proyectos.
+La primera versión de esta app no cumplía el pedido, y eso es parte del material.
+
+**Qué pasó.** El pedido decía "una aplicación similar a vm.podeley.ar". El agente entregó un mapa a pantalla completa con una ficha de cuatro números, sólo gas, sin ficha de pozo, y con datos a los que les faltaban años enteros. Sus mensajes finales decían "publicada y funcionando", las pruebas pasaban y el reporte de calidad decía "pass".
+
+**Cómo se detectó.** La persona abrió la app, la comparó con la referencia y vio que no se parecía; no hizo falta leer código. Los años faltantes aparecieron después, al sumar la producción de la cuenca mes a mes: 2024 y 2025 daban una fracción mínima de 2023.
+
+**Cómo se corrigió.** Un segundo agente empezó por recuperar el pedido original palabra por palabra y por describir la referencia en detalle, antes de tocar nada. Recién entonces comparó, listó las diferencias y propuso un plan. Los datos faltantes resultaron ser un problema de la vía de acceso a la fuente, no del código de cálculo.
+
+**Qué enseña.**
+
+- Un ejemplo concreto ("como esta app") es la mejor especificación, y hay que volver a él al revisar.
+- "Las pruebas pasan" sólo vale lo que valen las pruebas. Un control que no mira lo importante da una falsa tranquilidad.
+- Conviene pedirle al agente que diga qué *no* pudo hacer. La primera versión lo decía, pero en la mitad de un mensaje largo.
+- Los permisos también son parte del proceso: el segundo agente no pudo copiar código de un repositorio privado a uno público, lo informó y preguntó cómo seguir.
+
+## 6. Guardrails usados
+
+- Repositorio nuevo. La app de referencia se usó como especificación; su código no se copió.
 - Los datos crudos no se versionan, pero sí su procedencia y los derivados.
-- Si la fuente pública falla, la app usa únicamente un fixture explícitamente sintético.
-- El forecast parte de cero pozos futuros.
+- Si la fuente pública falla o le falta un mes, el build se corta: no se publica nada a medias.
+- Los supuestos del pronóstico están a la vista y se pueden mover.
 - Los cambios automáticos de datos abren un pull request; no escriben directamente en `main`.
 - Las vulnerabilidades de dependencias se auditan antes de publicar.
 
-## 6. Preguntas para discutir en clase
+## 7. Preguntas para discutir en clase
 
 1. ¿Qué parte necesitó conocimiento del dominio y cuál pudo delegarse?
 2. ¿Cómo detectarían un error de unidades sin leer Python?
@@ -68,11 +85,10 @@ Una persona no programadora puede verificar:
 4. ¿Qué debería revisar una persona antes de aceptar el PR mensual?
 5. ¿Qué cambia si la app se usa para una decisión económica real?
 
-## 7. Próximos ejercicios
+## 8. Próximos ejercicios
 
-- Reemplazar las bandas 0,75×/1,25× por percentiles empíricos con muestra suficiente.
-- Incorporar petróleo sin mezclar unidades.
+- Sumar la producción anterior a 2006 desde las series históricas por yacimiento.
+- Contrastar el EUR por bloque con las reservas certificadas publicadas.
+- Agregar capacidad de gasoductos y plantas como límite del pronóstico.
 - Comparar Arps con otro modelo y explicar la métrica de selección.
-- Agregar descarga de escenarios con todos sus supuestos.
-- Escribir un test que reproduzca un error de datos real encontrado durante la actualización.
-
+- Escribir un test que reproduzca un error de datos real encontrado durante una actualización.

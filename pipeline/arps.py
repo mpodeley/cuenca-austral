@@ -14,7 +14,6 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 MIN_POINTS = 12          # meses con producción desde el pico para intentar un ajuste
-PEAK_WINDOW = 24         # el pico se busca en los primeros meses de la serie
 B_MAX = 1.0              # pozos convencionales: entre exponencial (b→0) y armónica (b=1)
 DI_BOUNDS = (0.001, 0.6)  # declinación inicial nominal, 1/mes
 R2_MIN = 0.30            # por debajo, el ajuste se descarta
@@ -37,7 +36,10 @@ def fit(rates: np.ndarray) -> dict[str, Any] | None:
     """Ajusta una hiperbólica desde el pico. Devuelve ``None`` si no hay datos suficientes."""
     if len(rates) == 0 or rates.max() <= 0:
         return None
-    t0 = int(np.argmax(rates[:PEAK_WINDOW]))
+    # el pico es el máximo de la media móvil de 3 meses: muchos pozos tienen su mejor etapa tras una reparación
+    smooth = np.convolve(rates, np.ones(3) / 3, mode="same") if len(rates) >= 3 else rates
+    t0 = int(np.argmax(smooth))
+    t0 = max(0, t0 - 1) + int(np.argmax(rates[max(0, t0 - 1):t0 + 2]))
     tail = rates[t0:]
     mask = tail > 0
     if mask.sum() < MIN_POINTS:
@@ -113,5 +115,7 @@ def eur(rates: np.ndarray, cumulative: float, active: bool, fluid: str, fitted: 
         ]
         low, high = float(np.percentile(tails, 10)), float(np.percentile(tails, 90))
         metodo = "Monte Carlo del ajuste"
+        if high - low < 0.05 * tail:  # la cola ya corre a declinación terminal: el ajuste no la mueve
+            low, high, metodo = 0.75 * tail, 1.25 * tail, "±25 % (cola en declinación terminal)"
     conf = "alta" if fitted["r2"] >= 0.8 and fitted["n"] >= 36 else "media" if fitted["r2"] >= 0.5 and fitted["n"] >= 18 else "baja"
     return {"eur": cumulative + tail, "lo": cumulative + min(low, tail), "hi": cumulative + max(high, tail), "metodo": metodo, "conf": conf}

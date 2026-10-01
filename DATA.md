@@ -2,26 +2,35 @@
 
 ## Procedencia
 
-Los artefactos en modo `official` se derivan del catálogo de Datos Argentina y de publicaciones de la Secretaría de Energía. Cada ejecución registra URLs, fecha, tamaño y SHA-256 en `data/processed/manifest.json`.
+Todo se deriva de publicaciones de la Secretaría de Energía de la Nación en `datos.energia.gob.ar`. `data/processed/manifest.json` registra, para cada año, el recurso usado, su URL, su fecha de modificación y cuántas filas de la Cuenca Austral aportó.
 
-El modo `demo` contiene datos sintéticos generados con semilla fija. Los nombres empiezan con “Área Escuela” y no representan concesiones, operadores, reservas ni producción reales.
+La producción se lee de los **CSV anuales completos**, por streaming. No se usa la API de consulta (DataStore) del portal: para 2014, 2015 y 2017 responde 404, y para 2024 y 2025 devolvía cargas parciales, aunque el archivo descargable de cada año está completo.
 
 ## Reglas de transformación
 
-- Se conservan registros asociados a la Cuenca Austral. Santa Cruz y Tierra del Fuego se usan como fallback solo cuando falta el nombre de cuenca.
-- La convención publicada para Capítulo IV identifica `coordenadax` como latitud y `coordenaday` como longitud. El pipeline prueba ambos órdenes y acepta únicamente coordenadas dentro de los límites configurados.
-- Los duplicados por pozo y mes se agregan antes de publicar.
-- Gas se expresa en miles de m³ mensuales; petróleo y agua, en m³ mensuales.
-- Los nulos no se transforman en ceros excepto en campos volumétricos aditivos.
-- La vista web guarda los últimos 60 registros mensuales por pozo; métricas acumuladas y QA usan el histórico completo descargado.
-- Los polígonos se cruzan por nombre normalizado de área. Cada bloque declara `geometrySource` como oficial o envolvente derivada.
+- Se conservan las filas con `cuenca = AUSTRAL`, convencionales y no convencionales.
+- Cuando hay más de un recurso para un año se prefiere el que no es "DDJJ abiertas y cerradas"; entre gemelos, el más grande y luego el más reciente.
+- La fuente trae una fila por pozo, mes y formación: los volúmenes se suman y los días efectivos no.
+- Gas en miles de m³ por mes; petróleo y agua en m³ por mes. Las tasas publicadas son por día calendario.
+- El bloque de cada pozo es el área de concesión que declara en su último mes informado.
+- Los polígonos se cruzan por código de área y, si no coincide, por nombre normalizado. El shapefile oficial no trae superficie ni cuenca: la superficie se calcula y se toman las concesiones al sur de 48°S.
+- Onshore u offshore se decide por si la ubicación de superficie del pozo cae sobre tierra firme (Natural Earth 1:10m).
+
+## Controles
+
+`pipeline/build_data.py` no publica si:
+
+- falta algún mes entre enero de 2006 y el último mes;
+- el total de la cuenca de un mes es menor que el 60 % de la mediana de sus doce meses vecinos;
+- hay identificadores de pozo duplicados.
+
+Un mes final se descarta si los pozos que todavía no declararon representaban más del 10 % de la producción. Si representan menos, esos pozos sostienen su última tasa en los totales hasta seis meses, y el reporte de calidad lista la operadora atrasada.
 
 ## Advertencias
 
+- **La serie empieza en enero de 2006.** Los pozos que ya producían no tienen fecha de arranque ni acumulada anterior: su EUR y el agotamiento de los bloques antiguos están subestimados.
+- **No hay trayectorias de pozo.** La única publicación oficial cubre Vaca Muerta. Los pozos se ubican por su coordenada de superficie.
+- **14 de las 65 áreas no tienen polígono oficial.** Se dibujan como la envolvente de sus pozos, con borde punteado, y no tienen superficie. No representan límites legales.
 - Las fuentes son declaraciones juradas y pueden corregirse retroactivamente.
-- La cobertura y actualización no son uniformes entre recursos.
-- Los DataStore de producción 2014, 2015 y 2017 figuran activos en el catálogo pero devolvieron 404; el manifiesto registra esos descartes.
-- Una concesión puede cambiar de operador o denominación.
-- Las envolventes derivadas de pozos no representan límites legales.
-- No hay trayectorias Austral publicadas en la fuente vigente localizada. La antigua publicación nacional no responde; la app no las inventa.
-- Los pronósticos son escenarios técnicos didácticos, no reservas certificadas ni recomendaciones de inversión.
+- Una concesión puede cambiar de operadora o de denominación.
+- EUR, pozos tipo y pronósticos son estimaciones didácticas, no reservas certificadas ni recomendaciones de inversión.
