@@ -1,19 +1,72 @@
 {
   "status": "pass",
-  "generatedAt": "2026-10-01T12:46:55.452915+00:00",
-  "counts": {
-    "blocks": 65,
-    "wells": 3236,
-    "productionRows": 487813
+  "issues": [],
+  "notas": [],
+  "cobertura": {
+    "desde": "2006-01",
+    "hasta": "2026-08",
+    "meses": 248
   },
-  "coverage": {
-    "firstMonth": "2006-01-01",
-    "lastMonth": "2026-07-01"
+  "conteos": {
+    "pozos": 3236,
+    "pozos_que_produjeron": 1337,
+    "pozos_activos": 726,
+    "pozos_sin_coordenadas": 0,
+    "bloques": 65,
+    "bloques_con_poligono_oficial": 51,
+    "bloques_con_poligono_derivado": 14,
+    "registros_mensuales": 699366
   },
-  "checks": {
-    "uniqueWellIds": true,
-    "validCoordinates": true,
-    "allWellsJoinedToBlock": true
+  "declaracion_atrasada": [
+    {
+      "empresa": "VELITEC S.A.",
+      "pozos_activos": 136
+    }
+  ],
+  "gas_MMm3d_por_anio": {
+    "2006": 28.22,
+    "2007": 25.37,
+    "2008": 24.95,
+    "2009": 27.17,
+    "2010": 28.58,
+    "2011": 29.63,
+    "2012": 30.42,
+    "2013": 28.81,
+    "2014": 27.44,
+    "2015": 26.45,
+    "2016": 28.93,
+    "2017": 29.22,
+    "2018": 31.54,
+    "2019": 32.98,
+    "2020": 31.51,
+    "2021": 29.76,
+    "2022": 27.18,
+    "2023": 25.43,
+    "2024": 24.21,
+    "2025": 27.1,
+    "2026": 25.77
   },
-  "issues": []
+  "petroleo_m3d_por_anio": {
+    "2006": 5711,
+    "2007": 4397,
+    "2008": 4728,
+    "2009": 4821,
+    "2010": 4398,
+    "2011": 4085,
+    "2012": 4336,
+    "2013": 4004,
+    "2014": 3704,
+    "2015": 3487,
+    "2016": 3244,
+    "2017": 2827,
+    "2018": 3296,
+    "2019": 3549,
+    "2020": 2620,
+    "2021": 2540,
+    "2022": 2123,
+    "2023": 1790,
+    "2024": 1691,
+    "2025": 1715,
+    "2026": 1621
+  }
 }

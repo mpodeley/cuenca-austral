@@ -1,442 +1,211 @@
 {
-  "schemaVersion": 1,
-  "pipelineVersion": "0.1.0",
-  "generatedAt": "2026-10-01T12:46:55.452915+00:00",
-  "mode": "official",
+  "schemaVersion": 2,
+  "pipelineVersion": "0.2.0",
+  "source_date": "2026-08",
   "sources": [
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=4e1c55e5-1f1b-4fc8-aa37-2080d9795f29&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-4e1c55e5-1f1b-4fc8-aa37-2080d9795f29-page-000.json",
-      "bytes": 25925763,
-      "sha256": "f56cbd0051ca125819bccafa7180ca830106fd8eb17ba8fcfc429e444b4ea2b9",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2006",
-      "resourceId": "4e1c55e5-1f1b-4fc8-aa37-2080d9795f29",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2006,
+      "name": "Producción de Pozos de Gas y Petróleo 2006",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/4e1c55e5-1f1b-4fc8-aa37-2080d9795f29/download/produccin-de-pozos-de-gas-y-petrleo-2006.csv",
+      "resource_id": "4e1c55e5-1f1b-4fc8-aa37-2080d9795f29",
+      "last_modified": "2025-12-03T07:01:10.517250",
+      "rows": 27460
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=be663a63-f020-4e28-8f31-c5f81d47554d&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-be663a63-f020-4e28-8f31-c5f81d47554d-page-000.json",
-      "bytes": 27079259,
-      "sha256": "92c1e5de3c3b3e93b38e617ea87f56ebe48315810981e27bc9f94bb915312835",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2007",
-      "resourceId": "be663a63-f020-4e28-8f31-c5f81d47554d",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2007,
+      "name": "Producción de Pozos de Gas y Petróleo 2007",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/be663a63-f020-4e28-8f31-c5f81d47554d/download/produccin-de-pozos-de-gas-y-petrleo-2007.csv",
+      "resource_id": "be663a63-f020-4e28-8f31-c5f81d47554d",
+      "last_modified": "2025-12-04T07:01:10.698663",
+      "rows": 28617
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=3430b5a8-a516-42ca-a47d-2e1ce45925fb&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-3430b5a8-a516-42ca-a47d-2e1ce45925fb-page-000.json",
-      "bytes": 6438991,
-      "sha256": "4fba925db579775709bd7d95c749c3a6789ed6d87b577048725158477c657c14",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2008",
-      "resourceId": "3430b5a8-a516-42ca-a47d-2e1ce45925fb",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2008,
+      "name": "Producción de Pozos de Gas y Petróleo 2008",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/3430b5a8-a516-42ca-a47d-2e1ce45925fb/download/produccin-de-pozos-de-gas-y-petrleo-2008.csv",
+      "resource_id": "3430b5a8-a516-42ca-a47d-2e1ce45925fb",
+      "last_modified": "2026-09-05T07:01:27.972383",
+      "rows": 30214
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=48585038-055a-4437-bb1d-4fe36073f453&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-48585038-055a-4437-bb1d-4fe36073f453-page-000.json",
-      "bytes": 30297923,
-      "sha256": "ce9fdffe07974e280a660abd5bd8cad6e22f91c4632de743c3749286461e9bd2",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2009",
-      "resourceId": "48585038-055a-4437-bb1d-4fe36073f453",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2009,
+      "name": "Producción de Pozos de Gas y Petróleo 2009",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/48585038-055a-4437-bb1d-4fe36073f453/download/produccin-de-pozos-de-gas-y-petrleo-2009.csv",
+      "resource_id": "48585038-055a-4437-bb1d-4fe36073f453",
+      "last_modified": "2026-09-06T07:10:22.110628",
+      "rows": 32500
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=48585038-055a-4437-bb1d-4fe36073f453&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-48585038-055a-4437-bb1d-4fe36073f453-page-001.json",
-      "bytes": 487856,
-      "sha256": "8d6a59e767ab10d5be9195b62ac2a6a9e834481b16ae8f4171a1134708e888b1",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2009",
-      "resourceId": "48585038-055a-4437-bb1d-4fe36073f453",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2010,
+      "name": "Producción de Pozos de Gas y Petróleo 2010",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/364ca28e-d069-4bd6-8771-925f0db152a8/download/produccin-de-pozos-de-gas-y-petrleo-2010.csv",
+      "resource_id": "364ca28e-d069-4bd6-8771-925f0db152a8",
+      "last_modified": "2026-09-07T07:06:17.714318",
+      "rows": 32811
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=364ca28e-d069-4bd6-8771-925f0db152a8&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-364ca28e-d069-4bd6-8771-925f0db152a8-page-000.json",
-      "bytes": 30178133,
-      "sha256": "57128efd063590c8e2ddc5c5e845715d2bd0547d51f2082afb219baaa3b4759a",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2010",
-      "resourceId": "364ca28e-d069-4bd6-8771-925f0db152a8",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2011,
+      "name": "Producción de Pozos de Gas y Petróleo 2011",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/4817272c-7365-4bdd-b02d-75b118218b10/download/produccin-de-pozos-de-gas-y-petrleo-2011.csv",
+      "resource_id": "4817272c-7365-4bdd-b02d-75b118218b10",
+      "last_modified": "2026-09-08T07:01:28.820600",
+      "rows": 33386
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=364ca28e-d069-4bd6-8771-925f0db152a8&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-364ca28e-d069-4bd6-8771-925f0db152a8-page-001.json",
-      "bytes": 793601,
-      "sha256": "36fba16ca6a8f25f01b9b5b73ed80b58b08b15d737fbb88377dbfa9fd37d04dd",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2010",
-      "resourceId": "364ca28e-d069-4bd6-8771-925f0db152a8",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2012,
+      "name": "Producción de Pozos de Gas y Petróleo 2012",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/0dce0e75-1556-47ee-8615-1955fbd54ade/download/produccin-de-pozos-de-gas-y-petrleo-2012.csv",
+      "resource_id": "0dce0e75-1556-47ee-8615-1955fbd54ade",
+      "last_modified": "2026-09-09T07:07:48.985723",
+      "rows": 33608
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=4817272c-7365-4bdd-b02d-75b118218b10&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-4817272c-7365-4bdd-b02d-75b118218b10-page-000.json",
-      "bytes": 30303512,
-      "sha256": "6f6a320dbbfd3148f2c6462092dab52cf3d0d1fb1c49c462628ae0bf418a70eb",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2011",
-      "resourceId": "4817272c-7365-4bdd-b02d-75b118218b10",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2013,
+      "name": "Producción de Pozos de Gas y Petróleo 2013",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/bc7ac8fe-2cec-4dab-acdd-322ea1ccc887/download/produccin-de-pozos-de-gas-y-petrleo-2013.csv",
+      "resource_id": "bc7ac8fe-2cec-4dab-acdd-322ea1ccc887",
+      "last_modified": "2025-12-10T07:01:22.698963",
+      "rows": 33466
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=4817272c-7365-4bdd-b02d-75b118218b10&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-4817272c-7365-4bdd-b02d-75b118218b10-page-001.json",
-      "bytes": 1354506,
-      "sha256": "de8eeedf5f375fbb0ce3e0ed4de2073f098dbbb9ddc73394418cedf27cc832bc",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2011",
-      "resourceId": "4817272c-7365-4bdd-b02d-75b118218b10",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=0dce0e75-1556-47ee-8615-1955fbd54ade&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-0dce0e75-1556-47ee-8615-1955fbd54ade-page-000.json",
-      "bytes": 30317007,
-      "sha256": "6c763988cc090d128cbf1089a0cf5d7ba12c416c5671bc02bb4200ed8d4ddb63",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2012",
-      "resourceId": "0dce0e75-1556-47ee-8615-1955fbd54ade",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=0dce0e75-1556-47ee-8615-1955fbd54ade&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-0dce0e75-1556-47ee-8615-1955fbd54ade-page-001.json",
-      "bytes": 1573342,
-      "sha256": "f5532ef856ca7b6a10af6bc2bb62434a7baddb17f014720f6a6c5868f47ece9b",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2012",
-      "resourceId": "0dce0e75-1556-47ee-8615-1955fbd54ade",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=bc7ac8fe-2cec-4dab-acdd-322ea1ccc887&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-bc7ac8fe-2cec-4dab-acdd-322ea1ccc887-page-000.json",
-      "bytes": 30320965,
-      "sha256": "11f74b37b776d44a7b7c7fc66c896b78371a8b06548021551f65a687b6feb416",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2013",
-      "resourceId": "bc7ac8fe-2cec-4dab-acdd-322ea1ccc887",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=bc7ac8fe-2cec-4dab-acdd-322ea1ccc887&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-bc7ac8fe-2cec-4dab-acdd-322ea1ccc887-page-001.json",
-      "bytes": 1437098,
-      "sha256": "620125d2fcf9d307f6293e7cf42a21c8e20a5d74b7eb9af3ce7d212400b0fe82",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2013",
-      "resourceId": "bc7ac8fe-2cec-4dab-acdd-322ea1ccc887",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "title": "Producción de Pozos de Gas y Petróleo 2014",
+      "anio": 2014,
+      "name": "Producción de Pozos de Gas y Petróleo 2014",
       "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/cd9813a7-1e19-4f60-a02a-7903dd81aff7/download/produccin-de-pozos-de-gas-y-petrleo-2014.csv",
-      "resourceId": "cd9813a7-1e19-4f60-a02a-7903dd81aff7",
-      "status": "skipped",
-      "reason": "El DataStore publicado no está accesible: HTTP Error 404: Not Found"
+      "resource_id": "cd9813a7-1e19-4f60-a02a-7903dd81aff7",
+      "last_modified": "2025-12-11T07:01:19.965119",
+      "rows": 33480
     },
     {
-      "title": "Producción de Pozos de Gas y Petróleo 2015",
+      "anio": 2015,
+      "name": "Producción de Pozos de Gas y Petróleo 2015",
       "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/e375aa35-fd8d-41d6-aa0c-e6879ca567a1/download/produccin-de-pozos-de-gas-y-petrleo-2015.csv",
-      "resourceId": "e375aa35-fd8d-41d6-aa0c-e6879ca567a1",
-      "status": "skipped",
-      "reason": "El DataStore publicado no está accesible: HTTP Error 404: Not Found"
+      "resource_id": "e375aa35-fd8d-41d6-aa0c-e6879ca567a1",
+      "last_modified": "2026-09-12T07:04:34.673565",
+      "rows": 33768
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=d8539ae8-0a71-4339-a16c-139b21bd2cd0&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-d8539ae8-0a71-4339-a16c-139b21bd2cd0-page-000.json",
-      "bytes": 30493336,
-      "sha256": "88466ca640ac513950df959a7a10115865af6f1a8795b156eccf14e45e56ca23",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2016",
-      "resourceId": "d8539ae8-0a71-4339-a16c-139b21bd2cd0",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2016,
+      "name": "Producción de Pozos de Gas y Petróleo 2016",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/d8539ae8-0a71-4339-a16c-139b21bd2cd0/download/produccin-de-pozos-de-gas-y-petrleo-2016.csv",
+      "resource_id": "d8539ae8-0a71-4339-a16c-139b21bd2cd0",
+      "last_modified": "2026-09-13T07:01:53.728689",
+      "rows": 33672
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=d8539ae8-0a71-4339-a16c-139b21bd2cd0&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-d8539ae8-0a71-4339-a16c-139b21bd2cd0-page-001.json",
-      "bytes": 1609318,
-      "sha256": "d2654607bf99cbfed51a38a831b071b39a5c53c3286313327ef828b9ca27c7cd",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2016",
-      "resourceId": "d8539ae8-0a71-4339-a16c-139b21bd2cd0",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "title": "Producción de Pozos de Gas y Petróleo 2017",
+      "anio": 2017,
+      "name": "Producción de Pozos de Gas y Petróleo 2017",
       "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/df4857e1-7c3f-4980-b5b5-184fe78bfcf0/download/produccin-de-pozos-de-gas-y-petrleo-2017.csv",
-      "resourceId": "df4857e1-7c3f-4980-b5b5-184fe78bfcf0",
-      "status": "skipped",
-      "reason": "El DataStore publicado no está accesible: HTTP Error 404: Not Found"
+      "resource_id": "df4857e1-7c3f-4980-b5b5-184fe78bfcf0",
+      "last_modified": "2026-03-14T07:02:03.315207",
+      "rows": 33705
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=333fd72a-9b83-4bc1-bc94-0f5940b52331&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-333fd72a-9b83-4bc1-bc94-0f5940b52331-page-000.json",
-      "bytes": 30477817,
-      "sha256": "fde89d8f52e824da56295b9afccb5b56dccb9c86c514661bb3eb53b68708e3a3",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2018",
-      "resourceId": "333fd72a-9b83-4bc1-bc94-0f5940b52331",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2018,
+      "name": "Producción de Pozos de Gas y Petróleo 2018",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/333fd72a-9b83-4bc1-bc94-0f5940b52331/download/produccin-de-pozos-de-gas-y-petrleo-2018.csv",
+      "resource_id": "333fd72a-9b83-4bc1-bc94-0f5940b52331",
+      "last_modified": "2026-09-22T06:01:50.001841",
+      "rows": 34439
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=333fd72a-9b83-4bc1-bc94-0f5940b52331&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-333fd72a-9b83-4bc1-bc94-0f5940b52331-page-001.json",
-      "bytes": 2352052,
-      "sha256": "a4576aa6b05942161d3d0084b27c976e54d891025c672d2e423abf434b621f39",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo 2018",
-      "resourceId": "333fd72a-9b83-4bc1-bc94-0f5940b52331",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2019,
+      "name": "Producción de Pozos de Gas y Petróleo - 2019",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/8bc0d61c-0408-43d4-a7bc-7178fcb5d37e/download/produccin-de-pozos-de-gas-y-petrleo-2019.csv",
+      "resource_id": "8bc0d61c-0408-43d4-a7bc-7178fcb5d37e",
+      "last_modified": "2026-09-22T05:09:34.719111",
+      "rows": 35199
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=8bc0d61c-0408-43d4-a7bc-7178fcb5d37e&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-8bc0d61c-0408-43d4-a7bc-7178fcb5d37e-page-000.json",
-      "bytes": 30392644,
-      "sha256": "db7bc2e30a42516b71712848904d3b27c5aae1c1743a2fa4b06f17d713f68a00",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2019",
-      "resourceId": "8bc0d61c-0408-43d4-a7bc-7178fcb5d37e",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2020,
+      "name": "Producción de Pozos de Gas y Petróleo - 2020",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/c4a4a6a0-e75a-4e12-ae5c-54d53a70348c/download/produccin-de-pozos-de-gas-y-petrleo-2020.csv",
+      "resource_id": "c4a4a6a0-e75a-4e12-ae5c-54d53a70348c",
+      "last_modified": "2026-09-22T06:04:52.310449",
+      "rows": 35854
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=8bc0d61c-0408-43d4-a7bc-7178fcb5d37e&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-8bc0d61c-0408-43d4-a7bc-7178fcb5d37e-page-001.json",
-      "bytes": 3090012,
-      "sha256": "4a05329eb4ea4d85537aa56e1346923ae95877c36b98747eacd4b720d58ef2b6",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2019",
-      "resourceId": "8bc0d61c-0408-43d4-a7bc-7178fcb5d37e",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2021,
+      "name": "Producción de Pozos de Gas y Petróleo - 2021",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/465be754-a372-4c31-b855-81dc5fe3309f/download/produccin-de-pozos-de-gas-y-petrleo-2021.csv",
+      "resource_id": "465be754-a372-4c31-b855-81dc5fe3309f",
+      "last_modified": "2023-11-23T02:01:31.329261",
+      "rows": 36234
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=c4a4a6a0-e75a-4e12-ae5c-54d53a70348c&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-c4a4a6a0-e75a-4e12-ae5c-54d53a70348c-page-000.json",
-      "bytes": 30442054,
-      "sha256": "53bb6da9e14c3c86d196e28d950837e4b444ddedd357a4c936b2dd86ef8e1218",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2020",
-      "resourceId": "c4a4a6a0-e75a-4e12-ae5c-54d53a70348c",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2022,
+      "name": "Producción de Pozos de Gas y Petróleo - 2022",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/876b3746-85e2-4039-adeb-b1354436159f/download/produccin-de-pozos-de-gas-y-petrleo-2022.csv",
+      "resource_id": "876b3746-85e2-4039-adeb-b1354436159f",
+      "last_modified": "2026-09-22T06:03:21.541100",
+      "rows": 36550
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=c4a4a6a0-e75a-4e12-ae5c-54d53a70348c&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-c4a4a6a0-e75a-4e12-ae5c-54d53a70348c-page-001.json",
-      "bytes": 3728319,
-      "sha256": "9eb1ce53a656a6c25dfbf0caaa7f1f29241dbd13d1d35e9cbc7f4c2f8523b4e8",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2020",
-      "resourceId": "c4a4a6a0-e75a-4e12-ae5c-54d53a70348c",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2023,
+      "name": "Producción de Pozos de Gas y Petróleo - 2023",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/231c39b3-e81e-4398-af8d-b115807f2c25/download/produccin-de-pozos-de-gas-y-petrleo-2023.csv",
+      "resource_id": "231c39b3-e81e-4398-af8d-b115807f2c25",
+      "last_modified": "2026-06-05T17:37:05.622693",
+      "rows": 36864
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=465be754-a372-4c31-b855-81dc5fe3309f&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-465be754-a372-4c31-b855-81dc5fe3309f-page-000.json",
-      "bytes": 30430939,
-      "sha256": "3ce70967a3e674e87c0f2e04ac6f4b9787f39483de283d2e2e269f1b522cee6d",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2021",
-      "resourceId": "465be754-a372-4c31-b855-81dc5fe3309f",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2024,
+      "name": "Producción de Pozos de Gas y Petróleo - 2024",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/94d82d18-488b-434c-806d-ee5e053ce1cd/download/produccin-de-pozos-de-gas-y-petrleo-2024.csv",
+      "resource_id": "94d82d18-488b-434c-806d-ee5e053ce1cd",
+      "last_modified": "2026-10-01T08:04:34.696713",
+      "rows": 37207
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=465be754-a372-4c31-b855-81dc5fe3309f&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-465be754-a372-4c31-b855-81dc5fe3309f-page-001.json",
-      "bytes": 4095866,
-      "sha256": "64e966c46553cfab5faa5c18f53fd64f15bb152dee1a8010eeb7b19e5bba3124",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2021",
-      "resourceId": "465be754-a372-4c31-b855-81dc5fe3309f",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
+      "anio": 2025,
+      "name": "Producción de Pozos de Gas y Petróleo - 2025",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/6f9f63bd-3f7e-43ab-8743-85997ae1380c/download/produccin-de-pozos-de-gas-y-petrleo-2025.csv",
+      "resource_id": "6f9f63bd-3f7e-43ab-8743-85997ae1380c",
+      "last_modified": "2026-10-01T08:02:56.325160",
+      "rows": 37484
     },
     {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=876b3746-85e2-4039-adeb-b1354436159f&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-876b3746-85e2-4039-adeb-b1354436159f-page-000.json",
-      "bytes": 30428868,
-      "sha256": "e622f9028f84d616bdbae7ca2213746245c7199a8bfcb8f13d29d7175303b858",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2022",
-      "resourceId": "876b3746-85e2-4039-adeb-b1354436159f",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=876b3746-85e2-4039-adeb-b1354436159f&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-876b3746-85e2-4039-adeb-b1354436159f-page-001.json",
-      "bytes": 4403571,
-      "sha256": "9045dcaebcdb6dfccf3232e1f319014c05924bc2fe9781de5a277b36dd3bf466",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2022",
-      "resourceId": "876b3746-85e2-4039-adeb-b1354436159f",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=231c39b3-e81e-4398-af8d-b115807f2c25&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-231c39b3-e81e-4398-af8d-b115807f2c25-page-000.json",
-      "bytes": 30467206,
-      "sha256": "6bf7c3f14d41924c17d2ad19e4a76c78b32e286ca00d9f0f8f7933bb8e2a0f08",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2023",
-      "resourceId": "231c39b3-e81e-4398-af8d-b115807f2c25",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=231c39b3-e81e-4398-af8d-b115807f2c25&limit=32000&offset=32000&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-231c39b3-e81e-4398-af8d-b115807f2c25-page-001.json",
-      "bytes": 4705942,
-      "sha256": "e21ba3c16371d1e3840f124db2fec7ff8063968a67aa869515d1960bc5cfc99c",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2023",
-      "resourceId": "231c39b3-e81e-4398-af8d-b115807f2c25",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=94d82d18-488b-434c-806d-ee5e053ce1cd&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-94d82d18-488b-434c-806d-ee5e053ce1cd-page-000.json",
-      "bytes": 4154491,
-      "sha256": "e2f5b4d52d9f8ee42c705a65ef2a93667211aadf4ff8daf47e1e9b0e7c894755",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2024",
-      "resourceId": "94d82d18-488b-434c-806d-ee5e053ce1cd",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=6f9f63bd-3f7e-43ab-8743-85997ae1380c&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-6f9f63bd-3f7e-43ab-8743-85997ae1380c-page-000.json",
-      "bytes": 3489584,
-      "sha256": "87cc93e184a8a0f304559a34084ef1b1c6edd24ca81242819b70a2ee17c31e7a",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo - 2025",
-      "resourceId": "6f9f63bd-3f7e-43ab-8743-85997ae1380c",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=fb7a47a0-cba9-4667-a004-6f6c1c346c23&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/production-fb7a47a0-cba9-4667-a004-6f6c1c346c23-page-000.json",
-      "bytes": 19535674,
-      "sha256": "db6fae969644f819d5c082d215a5acd98cd9d38d790e87bf73b1485c26b52e6e",
-      "cache": "reused",
-      "title": "Producción de Pozos de Gas y Petróleo – 2026",
-      "resourceId": "fb7a47a0-cba9-4667-a004-6f6c1c346c23",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/api/3/action/datastore_search?resource_id=cb5c0f04-7835-45cd-b982-3e25ca7d7751&limit=32000&offset=0&filters=%7B%22cuenca%22%3A+%22AUSTRAL%22%7D",
-      "path": "data/raw/wells-cb5c0f04-7835-45cd-b982-3e25ca7d7751-page-000.json",
-      "bytes": 2787304,
-      "sha256": "e4be4dd351721b323a7c27eb7d0aa94d3cf6fe1775b8a5ca2d547950dd76b258",
-      "cache": "reused",
-      "title": "Capítulo IV - Pozos",
-      "resourceId": "cb5c0f04-7835-45cd-b982-3e25ca7d7751",
-      "filters": {
-        "cuenca": "AUSTRAL"
-      }
-    },
-    {
-      "url": "https://datos.energia.gob.ar/dataset/81cfad0a-4162-4f85-ad71-837f5a5fae57/resource/48a306a3-d5da-4f28-8ab5-7f80767ffdec/download/produccin-hidrocarburos-concesiones-de-explotacin.zip",
-      "path": "data/raw/concessions-01.zip",
-      "bytes": 596513,
-      "sha256": "5245af707af4a4f8154d7ea80908aa4992d57f3eff7f19a64a92bbee4b45e0eb",
-      "title": "Producción Hidrocarburos Concesiones de Explotación"
-    },
-    {
-      "url": "https://datos.energia.gob.ar/dataset/0d4a18ee-9371-439a-8a94-4f53a9822664/resource/04263302-626d-4a81-9564-106e08b975a3/download/exploracin-hidrocarburos-cuencas-sedimentarias.csv",
-      "path": "data/raw/basin-00.bin",
-      "bytes": 1012038,
-      "sha256": "ff7de35b76cd0b8e53734fff8b6967521912b66c777eda4d63a8c2b74b53e97f",
-      "title": "Exploración Hidrocarburos Cuencas Sedimentarias"
-    },
-    {
-      "url": "https://datos.energia.gob.ar/dataset/0d4a18ee-9371-439a-8a94-4f53a9822664/resource/c477f5a7-75cf-4123-ba7b-e298eb52abbd/download/exploracin-hidrocarburos-cuencas-sedimentarias.zip",
-      "path": "data/raw/basin-01.zip",
-      "bytes": 353277,
-      "sha256": "ac02ce0fe37c1ddef8cea148a50ad9edfd23b7bbfcf0a0511caea99b34089a18",
-      "title": "Exploración Hidrocarburos Cuencas Sedimentarias"
+      "anio": 2026,
+      "name": "Producción de Pozos de Gas y Petróleo – 2026",
+      "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/fb7a47a0-cba9-4667-a004-6f6c1c346c23/download/produccin-de-pozos-de-gas-y-petrleo-2026.csv",
+      "resource_id": "fb7a47a0-cba9-4667-a004-6f6c1c346c23",
+      "last_modified": "2026-10-01T10:02:03.874866",
+      "rows": 22848
     }
   ],
   "outputs": [
     {
-      "path": "public/data/dataset.json",
-      "bytes": 16840710,
-      "sha256": "2dd3745c7fc96f63420176d23a46ba4f2fe715a68321aa7ce2e3438fa90fb392"
+      "path": "public/data/blocks.json",
+      "bytes": 39952,
+      "sha256": "30410f7cb3976aae17b34e535c48d05bcf01f6d924068ca01023fa4728beb8f4"
     },
     {
-      "path": "data/processed/wells.csv",
-      "bytes": 674006,
-      "sha256": "6ed261e02cbdb6ecbcfd19b0fcfd74f5b042416605cb3815517a131ecca205e1"
+      "path": "public/data/concesiones_austral.json",
+      "bytes": 55574,
+      "sha256": "719183b61077ee3158950204c7017ae101677c7492634490412101e3a1129e7b"
+    },
+    {
+      "path": "public/data/contexto.json",
+      "bytes": 187065,
+      "sha256": "c2916b4796d704654ca56b8ba59da5e24ea402631df6b49e1095af2ed05398f2"
+    },
+    {
+      "path": "public/data/wells.json",
+      "bytes": 2219036,
+      "sha256": "0d045aa136794050a3d17414629aa2f88e1bfa41aef096b28133c32650bf02d3"
+    },
+    {
+      "path": "public/data/well_series.json",
+      "bytes": 3480634,
+      "sha256": "46c709313dd7d39c520e20d4512a240621e76c52555d2c9d357cad3e982dce2f"
+    },
+    {
+      "path": "public/data/forecast.json",
+      "bytes": 576016,
+      "sha256": "684f3141aed2df28bff3753bfa76fd877b087989e9510e6152b99cd524fde415"
+    },
+    {
+      "path": "public/data/wells.csv",
+      "bytes": 1069381
     }
-  ],
-  "assumptions": [
-    "Cuenca Austral se identifica por el campo cuenca; Santa Cruz y Tierra del Fuego son fallback explícito.",
-    "coordenadax/coordenaday se prueban en ambos órdenes contra límites geográficos argentinos.",
-    "gas está expresado en miles de m3 mensuales; la tasa usa días productivos cuando se informan.",
-    "geometrías operativas sin polígono oficial se marcan como envolventes derivadas de pozos.",
-    "la aplicación publica los últimos 60 registros mensuales por pozo para mantener una descarga web razonable; los acumulados de área usan el histórico completo.",
-    "no se fabrican trayectorias: la publicación nacional histórica no responde y la vigente sólo cubre Vaca Muerta."
   ]
 }

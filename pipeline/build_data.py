@@ -1,617 +1,473 @@
 #!/usr/bin/env python3
-"""Descarga, valida y publica un recorte reproducible de la Cuenca Austral.
+"""Convierte el store de producción y la geografía en los JSON que usa la app.
 
-Sin argumentos resuelve recursos desde el catálogo nacional y procesa datos
-oficiales. ``--demo`` crea un conjunto sintético determinístico, claramente
-marcado, para desarrollar la interfaz sin confundirlo con datos oficiales.
+Entradas (versionadas): ``data/store/capiv_austral.json.gz`` y ``data/store/geo/``.
+Salidas: ``public/data/*.json``, ``public/data/wells.csv`` y el reporte de
+calidad y manifiesto en ``data/processed/``.
+
+Unidades publicadas: tasas de gas en Mm³/d (miles de m³ por día calendario),
+petróleo y agua en m³/d; acumuladas y EUR de gas en MMm³, de petróleo en Mm³.
 """
 
 from __future__ import annotations
 
-import argparse
 import csv
+import gzip
 import hashlib
-import html
-import io
 import json
-import math
-import random
-import re
-import shutil
+import statistics
 import sys
-import unicodedata
-import urllib.request
-import urllib.parse
-import zipfile
-from collections import defaultdict
-from datetime import UTC, date, datetime
-from pathlib import Path
-from typing import Any, Iterable
+import zlib
+from collections import Counter, defaultdict
+from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
-CONFIG_PATH = ROOT / "config" / "sources.json"
-RAW_DIR = ROOT / "data" / "raw"
-PROCESSED_DIR = ROOT / "data" / "processed"
-PUBLIC_DIR = ROOT / "public" / "data"
+import numpy as np
 
+from pipeline import arps
+from pipeline.common import PROCESSED_DIR, PUBLIC_DIR, ROOT, STORE_DIR, canonical, days_in_month, month_at, month_index, wrap, write_json
 
-def canonical(value: Any) -> str:
-    value = unicodedata.normalize("NFKD", str(value or ""))
-    return "".join(char for char in value if not unicodedata.combining(char)).lower().strip()
-
-
-def slug(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", canonical(value)).strip("-") or "sin-id"
+T0 = "2006-01"            # primer mes publicado por la fuente
+FORECAST_MONTHS = 240
+ACTIVE_WINDOW = 12        # un pozo está activo si produjo en los últimos 12 meses
+CARRY_MONTHS = 6          # declaración atrasada: se sostiene la última tasa hasta 6 meses
+LATE_SHARE = 0.10         # un mes final se descarta si falta más del 10 % de la producción
+TYPE_MIN_WELLS = 8        # pozos mínimos para un pozo tipo propio del bloque
+TYPE_MIN_AT_T = 4         # pozos mínimos vivos en un mes para calcular percentiles
+TYPE_MIN_MONTHS = 12      # historia mínima de un pozo para entrar al pozo tipo
+FLUIDS = ("gas", "oil")
 
 
-def stable_id(prefix: str, value: str) -> str:
-    digest = hashlib.sha256(canonical(value).encode()).hexdigest()[:10]
-    return f"{prefix}-{slug(value)[:36]}-{digest}"
+# ---------------------------------------------------------------- geometría
+
+def point_in_ring(x: float, y: float, ring: list[list[float]]) -> bool:
+    inside = False
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+            inside = not inside
+    return inside
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+def convex_hull(points: list[tuple[float, float]]) -> list[list[float]]:
+    points = sorted(set(points))
+    if len(points) < 3:
+        return [list(point) for point in points]
+
+    def half(sequence):
+        hull: list[tuple[float, float]] = []
+        for point in sequence:
+            while len(hull) >= 2 and (hull[-1][0] - hull[-2][0]) * (point[1] - hull[-2][1]) - (hull[-1][1] - hull[-2][1]) * (point[0] - hull[-2][0]) <= 0:
+                hull.pop()
+            hull.append(point)
+        return hull[:-1]
+
+    return [list(point) for point in half(points) + half(reversed(points))]
 
 
-def fetch(url: str, target: Path) -> dict[str, Any]:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    request = urllib.request.Request(url, headers={"User-Agent": "cuenca-austral/0.1 (+https://github.com/mpodeley/cuenca-austral)"})
-    with urllib.request.urlopen(request, timeout=120) as response, target.open("wb") as output:
-        shutil.copyfileobj(response, output)
-    return {"url": url, "path": str(target.relative_to(ROOT)), "bytes": target.stat().st_size, "sha256": sha256(target)}
+def derived_polygon(points: list[tuple[float, float]], pad: float = 0.03) -> list:
+    """Envolvente de los pozos de un bloque sin polígono oficial, con un margen."""
+    corners = [(x + dx, y + dy) for x, y in points for dx in (-pad * 1.6, pad * 1.6) for dy in (-pad, pad)]
+    ring = convex_hull(corners)
+    return [[[[round(x, 5), round(y, 5)] for x, y in ring + ring[:1]]]]
 
 
-def iter_dicts(value: Any) -> Iterable[dict[str, Any]]:
-    if isinstance(value, dict):
-        yield value
-        for child in value.values():
-            yield from iter_dicts(child)
-    elif isinstance(value, list):
-        for child in value:
-            yield from iter_dicts(child)
+# ------------------------------------------------------------------- series
+
+def load_inputs() -> tuple[dict[str, Any], dict[str, Any]]:
+    with gzip.open(STORE_DIR / "capiv_austral.json.gz", "rt", encoding="utf-8") as stream:
+        store = json.load(stream)
+    geo = {name: json.loads((STORE_DIR / "geo" / f"{name}.json").read_text(encoding="utf-8")) for name in ("pozos", "concesiones", "cuenca", "contexto")}
+    return store, geo
 
 
-def first_text(item: dict[str, Any], *names: str) -> str:
-    for name in names:
-        value = item.get(name)
-        if isinstance(value, str):
-            return value
-        if isinstance(value, dict):
-            for candidate in value.values():
-                if isinstance(candidate, str):
-                    return candidate
-    return ""
+def last_complete_month(store: dict[str, Any]) -> tuple[str, list[str]]:
+    """Último mes utilizable. Un mes final se descarta si los pozos que dejaron de declarar pesan demasiado."""
+    months = sorted({month for well in store["wells"].values() for month in well["m"]})
+    notes: list[str] = []
+    while len(months) > 12:
+        last, window = months[-1], months[-1 - CARRY_MONTHS:-1]
+        total = missing = 0.0
+        for well in store["wells"].values():
+            recent = [month for month in window if month in well["m"]]
+            if last in well["m"]:
+                total += well["m"][last][0] + well["m"][last][1]
+            elif recent:
+                missing += well["m"][recent[-1]][0] + well["m"][recent[-1]][1]
+        share = missing / (total + missing) if total + missing else 1.0
+        if share <= LATE_SHARE:
+            break
+        notes.append(f"{last} descartado: falta declarar {share:.0%} de la producción")
+        months.pop()
+    return months[-1], notes
 
 
-def resolve_catalog(config: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
-    found: dict[str, list[dict[str, str]]] = defaultdict(list)
-
-    payloads: dict[str, dict[str, Any]] = {}
-    for kind, spec in config["datasets"].items():
-        dataset_id = spec["dataset_id"]
-        if dataset_id not in payloads:
-            catalog_path = RAW_DIR / f"catalog-{slug(dataset_id)}.json"
-            try:
-                fetch(config["ckan_api"].format(dataset_id=dataset_id), catalog_path)
-                payloads[dataset_id] = json.loads(catalog_path.read_text(encoding="utf-8"))
-            except Exception:
-                payloads[dataset_id] = {}
-        result = payloads[dataset_id].get("result") or payloads[dataset_id]
-        for item in result.get("resources", []):
-            title = first_text(item, "name", "title", "description")
-            url = first_text(item, "url", "download_url")
-            if title and url and any(canonical(pattern) in canonical(title) for pattern in spec["resource_patterns"]):
-                found[kind].append({
-                    "title": title, "url": url, "format": first_text(item, "format"),
-                    "id": str(item.get("id") or ""),
-                    "datastore_active": bool(item.get("datastore_active")),
-                    "last_modified": str(item.get("last_modified") or ""),
-                    "description": str(item.get("description") or ""),
-                })
-        if not found[kind]:
-            found[kind].extend(resolve_landing_page(kind, spec))
-
-    for kind in config["datasets"]:
-        unique = {item["url"]: item for item in found[kind]}
-        found[kind] = sorted(unique.values(), key=lambda item: item["title"])
-        if not found[kind]:
-            raise RuntimeError(f"El catálogo no devolvió recursos para {kind}; revise config/sources.json")
-    return found
-
-
-def resolve_landing_page(kind: str, spec: dict[str, Any]) -> list[dict[str, str]]:
-    """Fallback for periods where the documented CKAN endpoint is unavailable."""
-    target = RAW_DIR / f"landing-{kind}.html"
-    fetch(spec["landing_page"], target)
-    content = html.unescape(target.read_text(encoding="utf-8", errors="replace"))
-    urls = [urllib.parse.urljoin(spec["landing_page"], value) for value in re.findall(r'href=["\']([^"\']+)["\']', content, re.IGNORECASE)]
-    candidates = []
-    for url in urls:
-        normalized = canonical(urllib.parse.unquote(url))
-        if "/download/" not in normalized:
+def build_wells(store: dict[str, Any], geo: dict[str, Any], t_now: str) -> list[dict[str, Any]]:
+    n = month_index(t_now, T0) + 1
+    days = np.array([days_in_month(month_at(T0, index)) for index in range(n)], dtype=float)
+    land = geo["contexto"]["tierra"]
+    wells = []
+    for well_id, raw in sorted(store["wells"].items(), key=lambda item: int(item[0])):
+        volume = np.zeros((3, n))
+        reported = np.zeros(n, dtype=bool)
+        for month, point in raw["m"].items():
+            index = month_index(month, T0)
+            if 0 <= index < n:
+                volume[:, index] = point[:3]
+                reported[index] = True
+        if not reported.any():
             continue
-        if kind == "production" and not ("produccion" in normalized and re.search(r"20\d{2}", normalized)):
-            continue
-        if kind == "wells" and not ("pozos" in normalized or "shapefile" in normalized):
-            continue
-        if kind == "concessions" and "concesion" not in normalized:
-            continue
-        if kind == "basin" and "cuenca" not in normalized:
-            continue
-        candidates.append({"title": Path(urllib.parse.urlparse(url).path).name, "url": url, "format": Path(url).suffix.lstrip(".")})
-    return list({item["url"]: item for item in candidates}.values())
-
-
-def detect_encoding(raw: bytes) -> str:
-    for encoding in ("utf-8-sig", "utf-8", "latin-1"):
-        try:
-            raw.decode(encoding)
-            return encoding
-        except UnicodeDecodeError:
-            pass
-    return "latin-1"
-
-
-def read_csv(path: Path) -> list[dict[str, str]]:
-    raw = path.read_bytes()
-    text = raw.decode(detect_encoding(raw))
-    sample = text[:8192]
-    try:
-        dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
-    except csv.Error:
-        dialect = csv.excel
-    return list(csv.DictReader(io.StringIO(text), dialect=dialect))
-
-
-def pick(row: dict[str, Any], *candidates: str) -> Any:
-    # CKAN conserva los nombres de campo conocidos. Evitar normalizar todas las
-    # claves en cada lectura reduce drásticamente el costo sobre cientos de miles de filas.
-    for candidate in candidates:
-        value = row.get(candidate)
-        if value not in (None, ""):
-            return value
-    lookup = {canonical(key).replace("_", "").replace(" ", ""): value for key, value in row.items()}
-    for candidate in candidates:
-        key = canonical(candidate).replace("_", "").replace(" ", "")
-        if key in lookup and lookup[key] not in (None, ""):
-            return lookup[key]
-    return None
-
-
-def number(value: Any, default: float = 0.0) -> float:
-    if value in (None, ""):
-        return default
-    cleaned = str(value).strip().replace(" ", "")
-    if cleaned.count(",") == 1 and cleaned.count(".") == 0:
-        cleaned = cleaned.replace(",", ".")
-    try:
-        result = float(cleaned)
-        return result if math.isfinite(result) else default
-    except ValueError:
-        return default
-
-
-def is_austral(row: dict[str, Any]) -> bool:
-    basin = canonical(pick(row, "cuenca", "nombre_cuenca", "nom_cuenca"))
-    province = canonical(pick(row, "provincia", "province"))
-    return "austral" in basin or province in {"santa cruz", "tierra del fuego"}
-
-
-def normalize_coordinates(row: dict[str, Any]) -> tuple[float, float] | None:
-    raw_geojson = pick(row, "geojson", "geometry")
-    if raw_geojson:
-        try:
-            geometry = json.loads(raw_geojson) if isinstance(raw_geojson, str) else raw_geojson
-            if geometry.get("type") == "Point":
-                longitude, latitude = geometry["coordinates"][:2]
-                if -76 <= longitude <= -52 and -58.5 <= latitude <= -20:
-                    return round(float(longitude), 6), round(float(latitude), 6)
-        except (ValueError, TypeError, KeyError, json.JSONDecodeError):
-            pass
-    x = number(pick(row, "coordenadax", "coord_x", "x", "latitud", "latitude"), 999)
-    y = number(pick(row, "coordenaday", "coord_y", "y", "longitud", "longitude"), 999)
-    pairs = [(y, x), (x, y)]
-    for longitude, latitude in pairs:
-        if -76 <= longitude <= -52 and -58.5 <= latitude <= -20:
-            return round(longitude, 6), round(latitude, 6)
-    return None
-
-
-def month_string(row: dict[str, Any]) -> str | None:
-    year = int(number(pick(row, "anio", "año", "year")))
-    month = int(number(pick(row, "mes", "month")))
-    if 1900 <= year <= 2200 and 1 <= month <= 12:
-        return f"{year:04d}-{month:02d}-01"
-    raw = pick(row, "fecha", "periodo", "date")
-    match = re.search(r"(20\d{2})[-/]?(0?[1-9]|1[0-2])", str(raw or ""))
-    return f"{match.group(1)}-{int(match.group(2)):02d}-01" if match else None
-
-
-def normalize_production(
-    rows: Iterable[dict[str, Any]], catalog_rows: Iterable[dict[str, Any]] = ()
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    wells: dict[str, dict[str, Any]] = {}
-    production: dict[tuple[str, str], dict[str, Any]] = {}
-    catalog: dict[str, dict[str, Any]] = {}
-    for catalog_row in catalog_rows:
-        raw_id = str(pick(catalog_row, "idpozo", "id_pozo") or "")
-        coordinates = normalize_coordinates(catalog_row)
-        if raw_id and coordinates and is_austral(catalog_row):
-            catalog[raw_id] = catalog_row
-    for row in rows:
-        if not is_austral(row):
-            continue
-        raw_well_id = str(pick(row, "idpozo", "id_pozo") or "")
-        detail = catalog.get(raw_well_id, row)
-        coordinates = normalize_coordinates(detail)
-        if not coordinates:
-            continue
-        name = str(pick(detail, "sigla", "pozo", "well", "nombrepozo") or pick(row, "sigla") or "Pozo sin sigla").strip()
-        raw_well_id = raw_well_id or name
-        well_id = stable_id("well", raw_well_id)
-        block = str(pick(row, "areapermisoconcesion", "concesion", "area", "bloque") or "Área sin identificar").strip()
-        block_id = stable_id("block", block)
-        month = month_string(row)
-        province = str(pick(row, "provincia") or "Sin informar").strip()
-        offshore = canonical(province) == "estado nacional" or "marina" in canonical(block)
-        wells[well_id] = {
-            "id": well_id, "name": name, "blockId": block_id, "block": block,
-            "operator": str(pick(row, "empresa", "operador", "company") or "Sin informar").strip(),
-            "province": province,
-            "status": str(pick(detail, "tipoestado", "estado") or pick(row, "tipoestado") or "Sin informar").strip(),
-            "environment": "offshore" if offshore or any(
-                marker in canonical(pick(detail, "tipo", "subtipo", "clasificacion", "observaciones"))
-                for marker in ("offshore", "costa afuera")
-            ) else "onshore",
-            "longitude": coordinates[0], "latitude": coordinates[1],
-            "firstProduction": None, "lastProduction": None,
-            "formation": pick(detail, "formacion", "formprod", "formacionproductiva") or pick(row, "formacion", "formprod"),
-            "production": [],
+        last_report = int(np.nonzero(reported)[0][-1])
+        rate = volume / days
+        producing = np.nonzero((volume[0] > 0) | (volume[1] > 0))[0]
+        attrs, position = raw["a"], geo["pozos"].get(well_id)
+        offshore = None
+        if position:
+            offshore = not any(point_in_ring(position["lon"], position["lat"], ring) for ring in land)
+        well: dict[str, Any] = {
+            "id": well_id, "sigla": attrs.get("sigla", ""), "empresa": attrs.get("empresa", ""),
+            "area": attrs.get("area", "").strip() or "SIN ÁREA", "cod_area": attrs.get("cod_area", ""),
+            "yacimiento": attrs.get("yacimiento", ""), "provincia": attrs.get("provincia", ""),
+            "formacion": (attrs.get("formacion") or "sin informar").lower(), "estado": attrs.get("tipoestado", ""),
+            "tipo": attrs.get("tipopozo", ""), "extraccion": attrs.get("tipoextraccion", ""),
+            "recurso": " ".join(filter(None, [attrs.get("tipo_recurso", ""), attrs.get("sub_tipo_recurso", "")])).strip().lower(),
+            "profundidad": float(attrs["profundidad"]) if attrs.get("profundidad") else (position or {}).get("profundidad"),
+            "lon": position["lon"] if position else None, "lat": position["lat"] if position else None,
+            "offshore": offshore, "ult_declaracion": month_at(T0, last_report),
+            "_rate": rate, "_volume": volume, "_last_report": last_report, "_first": None,
         }
-        if not month:
+        if len(producing) == 0:
+            well.update({"m0": None, "campana": None, "pre2006": False, "ult_produccion": None, "activo": False, "fluido": None})
+        else:
+            first, last = int(producing[0]), int(producing[-1])
+            cum_gas, cum_oil = float(volume[0].sum()), float(volume[1].sum())
+            well.update({
+                "_first": first, "m0": month_at(T0, first), "campana": int(month_at(T0, first)[:4]),
+                "pre2006": first == 0, "ult_produccion": month_at(T0, last),
+                "activo": bool(last > last_report - ACTIVE_WINDOW and last_report >= n - 1 - CARRY_MONTHS),
+                "fluido": "gas" if cum_gas >= cum_oil else "oil",  # 1 Mm³ de gas ≈ 1 m³ de petróleo en energía
+                "cum_gas": round(cum_gas / 1000, 3), "cum_oil": round(cum_oil / 1000, 3), "cum_agua": round(float(volume[2].sum()) / 1000, 3),
+            })
+            for fluid, row in zip(FLUIDS, (0, 1)):
+                series = rate[row, first:last_report + 1]
+                fitted = arps.fit(series)
+                active = well["activo"] and series[-ACTIVE_WINDOW:].max() > 0
+                result = arps.eur(series, float(volume[row].sum()), bool(active), fluid, fitted, seed=zlib.crc32(f"{well_id}{fluid}".encode()))
+                recent = series[-3:]
+                well[f"_fit_{fluid}"] = fitted if fitted and fitted["ok"] else None
+                well[f"_active_{fluid}"] = bool(active)
+                well[fluid] = {
+                    "pico": round(float(series.max()), 2), "q": round(float(recent.mean()), 2) if active else 0.0,
+                    "eur": round(result["eur"] / 1000, 3), "eur_lo": round(result["lo"] / 1000, 3), "eur_hi": round(result["hi"] / 1000, 3),
+                    "metodo": result["metodo"], "conf": result["conf"],
+                    "qi": round(fitted["qi"], 2) if fitted else None, "di": round(fitted["di"], 4) if fitted else None,
+                    "b": round(fitted["b"], 2) if fitted else None, "r2": round(fitted["r2"], 2) if fitted else None,
+                    "t0": fitted["t0"] if fitted else None, "ajuste_ok": bool(fitted and fitted["ok"]),
+                }
+        wells.append(well)
+    return wells
+
+
+def well_projection(well: dict[str, Any], fluid: str, row: int, n: int) -> np.ndarray:
+    """Tasa proyectada de un pozo activo para los FORECAST_MONTHS meses posteriores al corte."""
+    if not well.get(f"_active_{fluid}"):
+        return np.zeros(FORECAST_MONTHS)
+    series = well["_rate"][row, well["_first"]:well["_last_report"] + 1]
+    positive = series[series > 0]
+    q_last = float(np.median(positive[-3:]))
+    lag = n - 1 - well["_last_report"]
+    fitted = well[f"_fit_{fluid}"]
+    if fitted:
+        rates = arps.project(q_last, len(series) - 1 - fitted["t0"], lag + FORECAST_MONTHS, fitted["di"], fitted["b"])
+    else:
+        rates = arps.project(q_last, 0, lag + FORECAST_MONTHS)
+    rates = rates[lag:]
+    rates[rates < arps.Q_ECON[fluid]] = 0.0
+    return rates
+
+
+def history(wells: list[dict[str, Any]], n: int) -> dict[str, np.ndarray]:
+    """Historia agregada. Los pozos con declaración atrasada sostienen su última tasa."""
+    total = np.zeros((3, n))
+    active = np.zeros(n)
+    for well in wells:
+        if well["_first"] is None:
             continue
-        key = (well_id, month)
-        point = production.setdefault(key, {"month": month, "gasMm3": 0.0, "oilM3": 0.0, "waterM3": 0.0, "producingDays": 0})
-        point["gasMm3"] += number(pick(row, "prod_gas", "prodgas", "gas"))
-        point["oilM3"] += number(pick(row, "prod_pet", "prodpet", "petroleo", "oil"))
-        point["waterM3"] += number(pick(row, "prod_agua", "prodagua", "agua", "water"))
-        point["producingDays"] = max(point["producingDays"], int(number(pick(row, "tef", "diasproduccion", "dias"), 30)))
-
-    for (well_id, _), point in production.items():
-        point.update({key: round(value, 4) if isinstance(value, float) else value for key, value in point.items()})
-        wells[well_id]["production"].append(point)
-    for well in wells.values():
-        well["production"].sort(key=lambda point: point["month"])
-        if well["production"]:
-            well["firstProduction"] = well["production"][0]["month"]
-            well["lastProduction"] = well["production"][-1]["month"]
-    return list(wells.values()), list(production.values())
+        rate, last = well["_rate"], well["_last_report"]
+        total += rate
+        active += ((rate[0] > 0) | (rate[1] > 0)).astype(float)
+        if well["activo"] and last < n - 1:
+            total[:, last + 1:] += rate[:, last:last + 1]
+            active[last + 1:] += 1
+    return {"gas": total[0], "oil": total[1], "agua": total[2], "activos": active}
 
 
-def bbox_polygon(wells: list[dict[str, Any]], pad: float = 0.13) -> dict[str, Any]:
-    longitudes = [well["longitude"] for well in wells]
-    latitudes = [well["latitude"] for well in wells]
-    west, east = min(longitudes) - pad, max(longitudes) + pad
-    south, north = min(latitudes) - pad, max(latitudes) + pad
-    return {"type": "Polygon", "coordinates": [[[west, south], [east, south], [east, north], [west, north], [west, south]]]}
+def type_profile(wells: list[dict[str, Any]], fluid: str, row: int) -> dict[str, Any] | None:
+    """Pozo tipo: percentiles por mes en producción de los pozos con arranque observado."""
+    cohort = [
+        well["_rate"][row, well["_first"]:well["_last_report"] + 1] for well in wells
+        if well["_first"] and well["fluido"] == fluid and well["_last_report"] - well["_first"] + 1 >= TYPE_MIN_MONTHS
+    ]
+    if len(cohort) < TYPE_MIN_WELLS:
+        return None
+    length = max(len(series) for series in cohort)
+    p10, p50, p90 = [], [], []
+    for k in range(length):
+        alive = [series[k] for series in cohort if len(series) > k]
+        if len(alive) < TYPE_MIN_AT_T:
+            break
+        low, mid, high = np.percentile(alive, [10, 50, 90])
+        p90.append(low); p50.append(mid); p10.append(high)  # convención petrolera: P10 es el caso alto
+    median = np.array(p50)
+    fitted = arps.fit(median)
+    if not fitted or len(median) < TYPE_MIN_MONTHS or median.max() <= 0:
+        return None
+    t0 = fitted["t0"]
+    curve = np.concatenate([median[:t0], arps.hyperbolic(np.arange(len(median) - t0, dtype=float), fitted["qi"], fitted["di"], fitted["b"])])
+    if len(curve) < FORECAST_MONTHS:
+        extra = arps.project(float(curve[-1]), len(curve) - 1 - t0, FORECAST_MONTHS - len(curve), fitted["di"], fitted["b"])
+        curve = np.concatenate([curve, extra])
+    curve = curve[:FORECAST_MONTHS]
+    curve[curve < arps.Q_ECON[fluid]] = 0.0
+    # dispersión entre pozos: percentiles de la acumulada temprana de cada pozo, relativos a la mediana
+    span = 24 if sum(1 for series in cohort if len(series) >= 24) >= TYPE_MIN_WELLS else TYPE_MIN_MONTHS
+    early = [float(series[:span].sum()) for series in cohort if len(series) >= span]
+    low_cum, mid_cum, high_cum = np.percentile(early, [10, 50, 90])
+    mid_cum = mid_cum or 1.0
+    return {
+        "n": len(cohort), "meses_obs": len(median), "p50": [round(float(v), 2) for v in curve],
+        "obs_p10": [round(float(v), 2) for v in p10], "obs_p50": [round(float(v), 2) for v in p50], "obs_p90": [round(float(v), 2) for v in p90],
+        "k_bajo": round(float(np.clip(low_cum / mid_cum, 0.05, 1)), 3), "k_alto": round(float(np.clip(high_cum / mid_cum, 1, 5)), 3),
+        "eur": round(float(curve.sum() * arps.DAYS / 1000), 3),
+        "qi": round(fitted["qi"], 2), "di": round(fitted["di"], 4), "b": round(fitted["b"], 2), "r2": round(fitted["r2"], 2),
+    }
 
 
-def build_blocks(wells: list[dict[str, Any]], supplied_geometries: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+# ------------------------------------------------------------------ bloques
+
+def majority(values: list[str]) -> str:
+    values = [value for value in values if value]
+    return Counter(values).most_common(1)[0][0] if values else ""
+
+
+def build_blocks(wells: list[dict[str, Any]], geo: dict[str, Any], t_now: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    n = month_index(t_now, T0) + 1
+    year_now = int(t_now[:4])
+    by_code = {item["codigo"]: item for item in geo["concesiones"]}
+    by_name = {canonical(item["nombre"]): item for item in geo["concesiones"]}
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for well in wells:
-        grouped[well["blockId"]].append(well)
-    blocks = []
-    for block_id, members in grouped.items():
-        points = [point for well in members for point in well["production"]]
-        dates = sorted(point["month"] for point in points)
-        latest = dates[-1] if dates else None
-        official_geometry = (supplied_geometries or {}).get(canonical(members[0]["block"]))
-        blocks.append({
-            "id": block_id, "name": members[0]["block"], "operator": members[0]["operator"],
-            "province": members[0]["province"], "environment": members[0]["environment"], "areaKm2": None,
-            "wellCount": len(members),
-            "activeWellCount": sum(1 for well in members if canonical(well["status"]) in {"en produccion", "produccion", "activo", "extraccion efectiva"}),
-            "firstProduction": dates[0] if dates else None, "lastProduction": latest,
-            "cumulativeGasMm3": round(sum(point["gasMm3"] for point in points), 2),
-            "latestGasMm3": round(sum(point["gasMm3"] for point in points if point["month"] == latest), 2) if latest else 0,
-            "geometrySource": "official-concession" if official_geometry else "derived-well-envelope",
-            "geometry": official_geometry or bbox_polygon(members),
-        })
-    return sorted(blocks, key=lambda block: block["name"])
+        grouped[well["area"]].append(well)
 
-
-def load_geographic_resource(path: Path) -> list[dict[str, Any]]:
-    """Read GeoJSON or a zipped shapefile without coupling the app to a GIS server."""
-    if path.suffix.lower() in {".json", ".geojson"}:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        return list(payload.get("features", []))
-    if path.suffix.lower() == ".csv" or (not zipfile.is_zipfile(path) and path.suffix.lower() == ".bin"):
-        features = []
-        for row in read_csv(path):
-            raw_geometry = pick(row, "geojson", "geometry")
-            if not raw_geometry:
-                continue
-            try:
-                geometry = json.loads(raw_geometry) if isinstance(raw_geometry, str) else raw_geometry
-            except json.JSONDecodeError:
-                continue
-            features.append({"type": "Feature", "properties": row, "geometry": geometry})
-        if features:
-            return features
-    shape_path = path
-    if zipfile.is_zipfile(path):
-        extract_dir = RAW_DIR / f"{path.stem}-extracted"
-        extract_dir.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(path) as archive:
-            archive.extractall(extract_dir)
-        matches = list(extract_dir.rglob("*.shp"))
-        if not matches:
-            raise RuntimeError(f"{path.name} no contiene un shapefile")
-        shape_path = matches[0]
-    try:
-        import shapefile  # type: ignore[import-not-found]
-    except ImportError as error:
-        raise RuntimeError("Instale requirements.txt para procesar shapefiles oficiales") from error
-    reader = shapefile.Reader(str(shape_path), encoding="latin-1")
-    fields = [field[0] for field in reader.fields[1:]]
-    return [
-        {"type": "Feature", "properties": dict(zip(fields, record)), "geometry": shape.__geo_interface__}
-        for shape, record in zip(reader.shapes(), reader.records())
-    ]
-
-
-def download_geography(items: list[dict[str, str]], kind: str, manifest: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    errors = []
-    for index, item in enumerate(items):
-        url = item["url"].replace("http://", "https://")
-        suffix = ".csv" if canonical(item.get("format")) == "csv" else Path(url.split("?")[0]).suffix.lower()
-        target = RAW_DIR / f"{kind}-{index:02d}{suffix if suffix in {'.zip', '.shp', '.json', '.geojson'} else '.bin'}"
-        try:
-            source = fetch(url, target)
-            source["title"] = item["title"]
-            manifest.append(source)
-            return load_geographic_resource(target)
-        except Exception as error:  # try the next distribution and report all failures if none work
-            errors.append(f"{item['title']}: {error}")
-    raise RuntimeError(f"No se pudo leer geografía {kind}: {'; '.join(errors)}")
-
-
-def datastore_rows(
-    config: dict[str, Any], resource: dict[str, Any], kind: str, manifest: list[dict[str, Any]],
-    filters: dict[str, Any] | None = None,
-) -> list[dict[str, Any]]:
-    """Fetch only the requested basin from CKAN instead of multi-hundred-MB national CSVs."""
-    rows: list[dict[str, Any]] = []
-    limit = 32000
-    offset = 0
-    page = 0
-    while True:
-        params = {"resource_id": resource["id"], "limit": limit, "offset": offset}
-        if filters:
-            params["filters"] = json.dumps(filters, ensure_ascii=False)
-        url = f"{config['datastore_api']}?{urllib.parse.urlencode(params)}"
-        target = RAW_DIR / f"{kind}-{resource['id']}-page-{page:03d}.json"
-        if target.exists() and target.stat().st_size:
-            source = {"url": url, "path": str(target.relative_to(ROOT)), "bytes": target.stat().st_size, "sha256": sha256(target), "cache": "reused"}
+    basin_types = {
+        fluid: {env: type_profile([w for w in wells if env is None or w["offshore"] == env], fluid, row) for env in (None, False, True)}
+        for fluid, row in zip(FLUIDS, (0, 1))
+    }
+    blocks, features, forecast_fields, used = [], [], {}, set()
+    for name, members in sorted(grouped.items()):
+        producers = [well for well in members if well["_first"] is not None]
+        current = [well for well in members if well["ult_declaracion"] >= month_at(T0, n - 1 - CARRY_MONTHS)] or members
+        concession = by_code.get(majority([well["cod_area"] for well in members])) or by_name.get(canonical(name))
+        located = [(well["lon"], well["lat"]) for well in members if well["lon"] is not None]
+        if concession:
+            used.add(concession["codigo"])
+            polygons, area, source = concession["poligonos"], concession["area_km2"], "oficial"
+        elif located:
+            polygons, area, source = derived_polygon(located), None, "derivada"
         else:
-            source = fetch(url, target)
-        source.update({"title": resource["title"], "resourceId": resource["id"], "filters": filters or {}})
-        manifest.append(source)
-        payload = json.loads(target.read_text(encoding="utf-8"))
-        if not payload.get("success"):
-            raise RuntimeError(f"CKAN rechazó la consulta a {resource['title']}")
-        records = payload["result"].get("records", [])
-        rows.extend(records)
-        if len(records) < limit:
-            break
-        offset += limit
-        page += 1
-    return rows
-
-
-def annual_production_resources(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    by_year: dict[int, dict[str, Any]] = {}
-    for item in items:
-        match = re.search(r"\b(20\d{2})\b", item["title"])
-        if not match or not item.get("datastore_active") or "no convencional" in canonical(item["title"]):
-            continue
-        year = int(match.group(1))
-        current = by_year.get(year)
-        score = (
-            "ddjj" not in canonical(item["title"]),
-            "identificador" in canonical(item.get("description", "")),
-            item.get("last_modified", ""),
+            polygons, area, source = None, None, None
+        offshore = sum(1 for well in members if well["offshore"]) > len(members) / 2
+        hist = history(members, n)
+        cum = {fluid: sum(well.get(f"cum_{fluid}", 0) for well in producers) for fluid in FLUIDS}
+        fluid_main = "gas" if cum["gas"] >= cum["oil"] else "oil"
+        by_year = Counter(well["campana"] for well in producers if not well["pre2006"])
+        recent_years = [year_now - offset for offset in range(1, 6)]  # cinco años calendario completos
+        pace = sum(by_year.get(year, 0) for year in recent_years) / 5
+        block: dict[str, Any] = {
+            "nombre": name, "codigo": majority([well["cod_area"] for well in members]),
+            "operador": majority([well["empresa"] for well in current]), "provincia": majority([well["provincia"] for well in members]),
+            "offshore": offshore, "n_offshore": sum(1 for well in members if well["offshore"]), "area_km2": area, "geometria": source,
+            "n_pozos": len(members), "n_productores": len(producers), "n_activos": sum(1 for well in members if well["activo"]),
+            "campana_min": min((well["campana"] for well in producers), default=None),
+            "campana_max": max((well["campana"] for well in producers), default=None),
+            "pozos_5a": sum(by_year.get(year, 0) for year in recent_years), "ritmo": round(pace, 2),
+            "fluido": fluid_main if producers else None,
+            "formacion": majority([well["formacion"] for well in producers or members]),
+            "datos_hasta": max(well["ult_declaracion"] for well in members),
+        }
+        types = {}
+        for fluid, row in zip(FLUIDS, (0, 1)):
+            series = hist[fluid]
+            eurs = [well[fluid] for well in producers]
+            total_eur = sum(item["eur"] for item in eurs)
+            peak = int(np.argmax(series)) if series.max() > 0 else None
+            block[fluid] = {
+                "q": round(float(series[-3:].mean()), 2), "cum": round(cum[fluid], 2),
+                "eur": round(total_eur, 2), "eur_lo": round(sum(item["eur_lo"] for item in eurs), 2), "eur_hi": round(sum(item["eur_hi"] for item in eurs), 2),
+                "agotado": round(cum[fluid] / total_eur, 3) if total_eur > 0 else None,
+                "pico": round(float(series.max()), 2), "pico_mes": month_at(T0, peak) if peak is not None else None,
+            }
+            own = type_profile(members, fluid, row)
+            profile = own or basin_types[fluid][offshore] or basin_types[fluid][None]
+            origin = "bloque" if own else ("cuenca " + ("offshore" if offshore else "onshore") if basin_types[fluid][offshore] else "cuenca")
+            types[fluid] = {**profile, "origen": origin} if profile else None
+        new_recent = sum(by_year.get(year, 0) for year in range(year_now - 2, year_now + 1))
+        depletion = block[fluid_main]["agotado"] if producers else None
+        block["etapa"] = (
+            "Sin producción" if block["n_activos"] == 0 else
+            "Desarrollo activo" if new_recent >= 3 else
+            "Maduro" if depletion is not None and depletion >= 0.8 else "En producción"
         )
-        current_score = (
-            "ddjj" not in canonical(current["title"]),
-            "identificador" in canonical(current.get("description", "")),
-            current.get("last_modified", ""),
-        ) if current else (False, False, "")
-        if current is None or score > current_score:
-            by_year[year] = item
-    return [by_year[year] for year in sorted(by_year)]
+        blocks.append(block)
+        if polygons:
+            features.append({"nombre": name, "operador": block["operador"], "geometria": source, "con_datos": True, "p": polygons})
+        base = {fluid: sum(well_projection(well, fluid, row, n) for well in producers) if producers else np.zeros(FORECAST_MONTHS) for fluid, row in zip(FLUIDS, (0, 1))}
+        forecast_fields[name] = {
+            "hist_gas": [round(float(v), 1) for v in hist["gas"]], "hist_oil": [round(float(v), 1) for v in hist["oil"]],
+            "hist_agua": [round(float(v), 1) for v in hist["agua"]], "activos": [int(v) for v in hist["activos"]],
+            "base_gas": [round(float(v), 1) for v in base["gas"]], "base_oil": [round(float(v), 1) for v in base["oil"]],
+            "tipo": {fluid: ({key: types[fluid][key] for key in ("p50", "k_bajo", "k_alto", "n", "origen", "eur")} if types[fluid] else None) for fluid in FLUIDS},
+            "pozos_anio": {str(year): count for year, count in sorted(by_year.items())},
+            "ritmo": round(pace, 2), "fluido": block["fluido"], "offshore": offshore, "operador": block["operador"],
+        }
+    for concession in geo["concesiones"]:
+        if concession["codigo"] not in used:
+            features.append({"nombre": concession["nombre"], "operador": concession["operador"], "geometria": "oficial", "con_datos": False,
+                             "area_km2": concession["area_km2"], "p": concession["poligonos"]})
+    basin_hist = history(wells, n)
+    basin = {
+        "hist_gas": [round(float(v), 1) for v in basin_hist["gas"]], "hist_oil": [round(float(v), 1) for v in basin_hist["oil"]],
+        "hist_agua": [round(float(v), 1) for v in basin_hist["agua"]], "activos": [int(v) for v in basin_hist["activos"]],
+        "pozos_anio": {str(year): count for year, count in sorted(Counter(w["campana"] for w in wells if w["_first"]).items())},
+    }
+    forecast = {"t0": T0, "n": n, "meses": FORECAST_MONTHS, "cuenca": basin, "campos": forecast_fields}
+    return blocks, features, forecast
 
 
-def official_geometries(
-    resources: dict[str, list[dict[str, str]]], manifest: list[dict[str, Any]]
-) -> tuple[dict[str, dict[str, Any]], dict[str, Any] | None]:
-    block_geometries: dict[str, dict[str, Any]] = {}
-    basin_feature: dict[str, Any] | None = None
-    try:
-        for feature in download_geography(resources["concessions"], "concessions", manifest):
-            properties = feature.get("properties") or {}
-            name = pick(properties, "areapermisoconcesion", "concesion", "area", "nombre", "nom_area", "nombre_de_", "nombre_de_area")
-            basin = canonical(pick(properties, "cuenca", "nom_cuenca"))
-            if name and ("austral" in basin or not basin):
-                block_geometries[canonical(name)] = feature["geometry"]
-    except RuntimeError:
-        pass
-    try:
-        for feature in download_geography(resources["basin"], "basin", manifest):
-            properties = feature.get("properties") or {}
-            name = canonical(pick(properties, "cuenca", "nombre", "name", "nom_cuenca"))
-            if "austral" in name:
-                basin_feature = feature
-                break
-    except RuntimeError:
-        pass
-    return block_geometries, basin_feature
+# ------------------------------------------------------------------ control
 
-
-def demo_dataset() -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
-    random.seed(20260930)
-    specs = [
-        ("Área Escuela Norte", "Operadora Didáctica", "Santa Cruz", "onshore", -68.9, -50.2, 16, 12.5, 0.72),
-        ("Área Escuela Sur", "Energía Abierta", "Tierra del Fuego", "onshore", -68.4, -53.5, 13, 9.2, 0.55),
-        ("Área Escuela Marina", "Consorcio Austral", "Tierra del Fuego", "offshore", -66.2, -52.5, 11, 21.0, 0.83),
-    ]
-    wells: list[dict[str, Any]] = []
-    for block, operator, province, environment, longitude, latitude, count, qi, decline in specs:
-        for index in range(count):
-            well_id = stable_id("well", f"{block}-{index + 1}")
-            block_id = stable_id("block", block)
-            start_year = 2018 + index % 5
-            start_month = 1 + index % 10
-            production = []
-            for month_index in range(48):
-                year = start_year + (start_month - 1 + month_index) // 12
-                month = (start_month - 1 + month_index) % 12 + 1
-                rate = qi * (0.8 + random.random() * 0.4) / ((1 + 0.8 * decline / 12 * month_index) ** (1 / 0.8))
-                production.append({"month": f"{year:04d}-{month:02d}-01", "gasMm3": round(rate * 30, 3), "oilM3": round(rate * 0.8, 3), "waterM3": round(rate * 0.4, 3), "producingDays": 30})
-            wells.append({
-                "id": well_id, "name": f"ESC-{slug(block)[-3:].upper()}-{index + 1:03d}", "blockId": block_id, "block": block,
-                "operator": operator, "province": province, "status": "En producción" if index < count - 2 else "Inactivo",
-                "environment": environment, "longitude": round(longitude + random.uniform(-0.28, 0.28), 6),
-                "latitude": round(latitude + random.uniform(-0.18, 0.18), 6), "firstProduction": production[0]["month"],
-                "lastProduction": production[-1]["month"], "formation": "Formación demostrativa", "production": production,
-            })
-    basin = {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"name": "Cuenca Austral (contorno esquemático demostrativo)"}, "geometry": {"type": "Polygon", "coordinates": [[[-72.8, -49.0], [-66.8, -48.5], [-63.5, -51.0], [-64.0, -55.5], [-69.2, -55.4], [-72.8, -52.2], [-72.8, -49.0]]]}}]}
-    return wells, build_blocks(wells), basin
-
-
-def download_official(config: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
-    resources = resolve_catalog(config)
-    manifest_sources: list[dict[str, Any]] = []
-    all_rows: list[dict[str, Any]] = []
-    production_resources = annual_production_resources(resources["production"])
-    if not production_resources:
-        raise RuntimeError("No se encontraron distribuciones anuales de producción en el catálogo")
-    skipped_resources = 0
-    for item in production_resources:
-        try:
-            all_rows.extend(datastore_rows(config, item, "production", manifest_sources, {"cuenca": "AUSTRAL"}))
-        except Exception as error:
-            skipped_resources += 1
-            manifest_sources.append({
-                "title": item["title"], "url": item["url"], "resourceId": item["id"],
-                "status": "skipped", "reason": f"El DataStore publicado no está accesible: {error}",
-            })
-    if skipped_resources == len(production_resources):
-        raise RuntimeError("Ninguna distribución anual de producción publicada respondió desde CKAN")
-    well_resource = next((item for item in resources["wells"] if item.get("datastore_active") and "capitulo iv" in canonical(item["title"])), None)
-    if not well_resource:
-        raise RuntimeError("No se encontró el padrón geográfico de pozos en CKAN")
-    catalog_rows = datastore_rows(config, well_resource, "wells", manifest_sources, {"cuenca": "AUSTRAL"})
-    wells, _ = normalize_production(all_rows, catalog_rows)
-    if not wells:
-        raise RuntimeError("Los recursos se descargaron, pero ningún registro válido coincidió con la Cuenca Austral")
-    geometries, basin_feature = official_geometries(resources, manifest_sources)
-    blocks = build_blocks(wells, geometries)
-    basin = {"type": "FeatureCollection", "features": [basin_feature or {"type": "Feature", "properties": {"name": "Extensión operativa derivada de pozos oficiales", "geometrySource": "derived"}, "geometry": bbox_polygon(wells, 0.7)}]}
-    return wells, blocks, basin, manifest_sources
-
-
-def validate(wells: list[dict[str, Any]], blocks: list[dict[str, Any]], generated_at: str) -> tuple[dict[str, Any], list[str]]:
+def quality(wells: list[dict[str, Any]], blocks: list[dict[str, Any]], forecast: dict[str, Any], t_now: str, notes: list[str], store: dict[str, Any]) -> dict[str, Any]:
+    n = forecast["n"]
     issues: list[str] = []
+    reported = Counter(month for well in store["wells"].values() for month in well["m"])
+    missing = [month_at(T0, index) for index in range(n) if not reported.get(month_at(T0, index))]
+    if missing:
+        issues.append(f"Meses sin ninguna declaración: {', '.join(missing)}")
+    energy = np.array(forecast["cuenca"]["hist_gas"]) + np.array(forecast["cuenca"]["hist_oil"])
+    drops = []
+    for index in range(n):
+        window = np.concatenate([energy[max(0, index - 6):index], energy[index + 1:index + 7]])
+        if len(window) and energy[index] < 0.6 * statistics.median(window):
+            drops.append(month_at(T0, index))
+    if drops:
+        issues.append(f"Caídas abruptas del total de cuenca (menos del 60 % de la mediana vecina): {', '.join(drops)}")
     ids = [well["id"] for well in wells]
     if len(ids) != len(set(ids)):
         issues.append("Hay identificadores de pozo duplicados")
-    invalid_coordinates = [well["id"] for well in wells if not (-76 <= well["longitude"] <= -52 and -58.5 <= well["latitude"] <= -20)]
-    if invalid_coordinates:
-        issues.append(f"Hay {len(invalid_coordinates)} pozos fuera de los límites argentinos configurados")
-    missing_blocks = [well["id"] for well in wells if not any(block["id"] == well["blockId"] for block in blocks)]
-    if missing_blocks:
-        issues.append(f"Hay {len(missing_blocks)} pozos sin bloque")
-    months = [point["month"] for well in wells for point in well["production"]]
-    report = {
-        "status": "fail" if issues else "pass", "generatedAt": generated_at,
-        "counts": {"blocks": len(blocks), "wells": len(wells), "productionRows": len(months)},
-        "coverage": {"firstMonth": min(months) if months else None, "lastMonth": max(months) if months else None},
-        "checks": {"uniqueWellIds": len(ids) == len(set(ids)), "validCoordinates": not invalid_coordinates, "allWellsJoinedToBlock": not missing_blocks},
-        "issues": issues,
-    }
-    return report, issues
-
-
-def write_outputs(mode: str, wells: list[dict[str, Any]], blocks: list[dict[str, Any]], basin: dict[str, Any], sources: list[dict[str, Any]]) -> None:
-    generated_at = "2026-09-30T00:00:00+00:00" if mode == "demo" else datetime.now(UTC).isoformat()
-    report, issues = validate(wells, blocks, generated_at)
-    if issues:
-        raise RuntimeError("Fallaron controles de calidad: " + "; ".join(issues))
-    data_through = report["coverage"]["lastMonth"] or "sin producción"
-    disclaimer = ("Datos procesados desde publicaciones oficiales; pueden ser provisorios y declarados por operadores."
-                  if mode == "official" else
-                  "Datos sintéticos determinísticos para desarrollo. No representan áreas, pozos ni producción reales.")
-    history_points = 60 if mode == "official" else None
-    web_wells = [
-        {**well, "production": well["production"][-history_points:] if history_points else well["production"]}
-        for well in wells
-    ]
-    dataset = {
-        "metadata": {
-            "generatedAt": generated_at, "dataThrough": data_through, "mode": mode, "disclaimer": disclaimer,
-            "webHistoryPolicy": "Últimos 60 registros mensuales por pozo; acumulados por área usan todo el histórico descargado." if history_points else "Histórico demostrativo completo.",
-            "trajectoryCoverage": "La fuente nacional histórica de trayectorias ya no responde y la fuente vigente cubre Vaca Muerta, no la Cuenca Austral; la capa se publica vacía, sin geometrías inventadas.",
+    without_position = sum(1 for well in wells if well["lon"] is None)
+    late = Counter(well["empresa"] for well in wells if well["activo"] and well["_last_report"] < n - 1)
+    return {
+        "status": "fail" if issues else "pass", "issues": issues, "notas": notes,
+        "cobertura": {"desde": T0, "hasta": t_now, "meses": n},
+        "conteos": {
+            "pozos": len(wells), "pozos_que_produjeron": sum(1 for well in wells if well["_first"] is not None),
+            "pozos_activos": sum(1 for well in wells if well["activo"]), "pozos_sin_coordenadas": without_position,
+            "bloques": len(blocks), "bloques_con_poligono_oficial": sum(1 for block in blocks if block["geometria"] == "oficial"),
+            "bloques_con_poligono_derivado": sum(1 for block in blocks if block["geometria"] == "derivada"),
+            "registros_mensuales": sum(reported.values()),
         },
-        "basin": basin, "blocks": blocks, "wells": web_wells,
-        "trajectories": {"type": "FeatureCollection", "features": []},
+        "declaracion_atrasada": [{"empresa": company, "pozos_activos": count} for company, count in late.most_common()],
+        "gas_MMm3d_por_anio": {str(year): round(float(np.mean(forecast["cuenca"]["hist_gas"][(year - 2006) * 12:(year - 2006) * 12 + 12])) / 1000, 2) for year in range(2006, int(t_now[:4]) + 1)},
+        "petroleo_m3d_por_anio": {str(year): round(float(np.mean(forecast["cuenca"]["hist_oil"][(year - 2006) * 12:(year - 2006) * 12 + 12]))) for year in range(2006, int(t_now[:4]) + 1)},
     }
-    for directory in (PROCESSED_DIR, PUBLIC_DIR):
-        directory.mkdir(parents=True, exist_ok=True)
-    (PUBLIC_DIR / "dataset.json").write_text(json.dumps(dataset, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+# ------------------------------------------------------------------ salidas
+
+def public_well(well: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in well.items() if not key.startswith("_")}
+
+
+def write_outputs(wells, blocks, features, forecast, geo, report, t_now: str, store) -> None:
+    n = forecast["n"]
+    series = {}
+    for well in wells:
+        if well["_first"] is None:
+            continue
+        first, last = well["_first"], well["_last_report"]
+        series[well["id"]] = {
+            "m0": first,
+            "gas": [round(float(v), 2) for v in well["_rate"][0, first:last + 1]],
+            "oil": [round(float(v), 2) for v in well["_rate"][1, first:last + 1]],
+            "agua": [round(float(v), 1) for v in well["_rate"][2, first:last + 1]],
+        }
+    assumptions = {
+        "activo_meses": ACTIVE_WINDOW, "declaracion_atrasada_meses": CARRY_MONTHS, "dmin_anual": arps.DMIN_ANNUAL,
+        "declinacion_por_defecto_anual": arps.DEFAULT_ANNUAL, "b_max": arps.B_MAX, "r2_min": arps.R2_MIN,
+        "limite_economico": arps.Q_ECON, "meses_minimos_ajuste": arps.MIN_POINTS, "horizonte_eur_meses": arps.HORIZON,
+        "pozo_tipo_min_pozos": TYPE_MIN_WELLS, "pronostico_meses": FORECAST_MONTHS,
+    }
+    files = {
+        "blocks.json": wrap(blocks, t_now, supuestos=assumptions),
+        "concesiones_austral.json": wrap(features, t_now),
+        "contexto.json": wrap({**geo["contexto"], "cuenca": geo["cuenca"]}, t_now, source="Natural Earth (tierra y límites) y Secretaría de Energía (cuenca sedimentaria)"),
+        "wells.json": wrap([public_well(well) for well in wells], t_now),
+        "well_series.json": wrap({"t0": T0, "n": n, "wells": series}, t_now),
+        "forecast.json": wrap(forecast, t_now),
+    }
+    for stale in PUBLIC_DIR.glob("*"):
+        stale.unlink()
+    outputs = []
+    for name, payload in files.items():
+        size = write_json(PUBLIC_DIR / name, payload)
+        outputs.append({"path": f"public/data/{name}", "bytes": size, "sha256": hashlib.sha256((PUBLIC_DIR / name).read_bytes()).hexdigest()})
+    flat_keys = [key for key in public_well(wells[0]) if key not in FLUIDS] + ["cum_gas", "cum_oil", "cum_agua"]
+    flat_keys = list(dict.fromkeys(flat_keys))
+    fluid_keys = ["pico", "q", "eur", "eur_lo", "eur_hi", "conf", "metodo", "qi", "di", "b", "r2", "ajuste_ok"]
+    with (PUBLIC_DIR / "wells.csv").open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream, lineterminator="\n")
+        writer.writerow(flat_keys + [f"{fluid}_{key}" for fluid in FLUIDS for key in fluid_keys])
+        for well in wells:
+            writer.writerow([well.get(key, "") for key in flat_keys] + [(well.get(fluid) or {}).get(key, "") for fluid in FLUIDS for key in fluid_keys])
+    outputs.append({"path": "public/data/wells.csv", "bytes": (PUBLIC_DIR / "wells.csv").stat().st_size})
+
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    for stale in PROCESSED_DIR.glob("*"):
+        stale.unlink()
     (PROCESSED_DIR / "quality-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    with (PROCESSED_DIR / "wells.csv").open("w", encoding="utf-8", newline="") as stream:
-        fields = ["id", "name", "blockId", "block", "operator", "province", "status", "environment", "longitude", "latitude", "firstProduction", "lastProduction", "formation"]
-        writer = csv.DictWriter(stream, fieldnames=fields, lineterminator="\n")
-        writer.writeheader()
-        writer.writerows({key: well.get(key) for key in fields} for well in wells)
+    counts = report["conteos"]
+    lines = [
+        "# Reporte de calidad", "",
+        f"- Estado: **{report['status']}**",
+        f"- Cobertura: {report['cobertura']['desde']} a {report['cobertura']['hasta']} ({report['cobertura']['meses']} meses, sin huecos)" if not report["issues"] else f"- Problemas: {'; '.join(report['issues'])}",
+        f"- Pozos: {counts['pozos']} ({counts['pozos_que_produjeron']} produjeron alguna vez, {counts['pozos_activos']} activos)",
+        f"- Bloques: {counts['bloques']} ({counts['bloques_con_poligono_oficial']} con polígono oficial, {counts['bloques_con_poligono_derivado']} con envolvente derivada de pozos)",
+        f"- Registros mensuales pozo-mes: {counts['registros_mensuales']}",
+        "", "## Gas de la cuenca por año (MMm³/d promedio)", "",
+        "| Año | Gas MMm³/d | Petróleo m³/d |", "|---|---|---|",
+        *[f"| {year} | {value} | {report['petroleo_m3d_por_anio'][year]} |" for year, value in report["gas_MMm3d_por_anio"].items()],
+    ]
+    if report["declaracion_atrasada"]:
+        lines += ["", "## Operadoras con declaración atrasada", "", *[f"- {item['empresa']}: {item['pozos_activos']} pozos activos sin el último mes; se sostiene su última tasa" for item in report["declaracion_atrasada"]]]
+    if report["notas"]:
+        lines += ["", "## Notas", "", *[f"- {note}" for note in report["notas"]]]
+    (PROCESSED_DIR / "quality-report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     manifest = {
-        "schemaVersion": 1, "pipelineVersion": "0.1.0", "generatedAt": generated_at, "mode": mode,
-        "sources": sources, "outputs": [
-            {"path": "public/data/dataset.json", "bytes": (PUBLIC_DIR / "dataset.json").stat().st_size, "sha256": sha256(PUBLIC_DIR / "dataset.json")},
-            {"path": "data/processed/wells.csv", "bytes": (PROCESSED_DIR / "wells.csv").stat().st_size, "sha256": sha256(PROCESSED_DIR / "wells.csv")},
-        ],
-        "assumptions": [
-            "Cuenca Austral se identifica por el campo cuenca; Santa Cruz y Tierra del Fuego son fallback explícito.",
-            "coordenadax/coordenaday se prueban en ambos órdenes contra límites geográficos argentinos.",
-            "gas está expresado en miles de m3 mensuales; la tasa usa días productivos cuando se informan.",
-            "geometrías operativas sin polígono oficial se marcan como envolventes derivadas de pozos.",
-            "la aplicación publica los últimos 60 registros mensuales por pozo para mantener una descarga web razonable; los acumulados de área usan el histórico completo.",
-            "no se fabrican trayectorias: la publicación nacional histórica no responde y la vigente sólo cubre Vaca Muerta.",
-        ],
+        "schemaVersion": 2, "pipelineVersion": "0.2.0", "source_date": t_now,
+        "sources": [{"anio": int(year), **{key: meta[key] for key in ("name", "url", "resource_id", "last_modified", "rows")}} for year, meta in sorted(store["meta"]["years"].items())],
+        "outputs": outputs,
     }
     (PROCESSED_DIR / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    summary = f"# Reporte de calidad\n\n- Estado: **{report['status']}**\n- Bloques: {len(blocks)}\n- Pozos: {len(wells)}\n- Registros mensuales: {report['counts']['productionRows']}\n- Cobertura: {report['coverage']['firstMonth']} a {report['coverage']['lastMonth']}\n- Modo: `{mode}`\n"
-    (PROCESSED_DIR / "quality-report.md").write_text(summary, encoding="utf-8")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--demo", action="store_true", help="genera datos sintéticos determinísticos")
-    args = parser.parse_args()
-    config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    if args.demo:
-        wells, blocks, basin = demo_dataset()
-        sources = [{"title": "Dataset sintético del repositorio", "url": None, "generatedBy": "pipeline/build_data.py --demo", "seed": 20260930}]
-        write_outputs("demo", wells, blocks, basin, sources)
-    else:
-        wells, blocks, basin, sources = download_official(config)
-        write_outputs("official", wells, blocks, basin, sources)
-    print(f"OK: {len(blocks)} bloques, {len(wells)} pozos -> public/data/dataset.json")
+    store, geo = load_inputs()
+    t_now, notes = last_complete_month(store)
+    wells = build_wells(store, geo, t_now)
+    blocks, features, forecast = build_blocks(wells, geo, t_now)
+    report = quality(wells, blocks, forecast, t_now, notes, store)
+    if report["issues"]:
+        raise RuntimeError("Fallaron controles de calidad: " + "; ".join(report["issues"]))
+    write_outputs(wells, blocks, features, forecast, geo, report, t_now, store)
+    print(f"OK: {len(blocks)} bloques, {len(wells)} pozos, datos a {t_now} -> {PUBLIC_DIR.relative_to(ROOT)}")
     return 0
 
 
