@@ -4,7 +4,7 @@
 - Cobertura: 2006-01 a 2026-08 (248 meses, sin huecos)
 - Pozos: 3236 (1337 produjeron alguna vez, 726 activos)
 - Bloques: 65 (51 con polígono oficial, 14 con envolvente derivada de pozos)
-- Registros mensuales pozo-mes: 699366
+- Registros mensuales pozo-mes: 699390
 
 ## Gas de la cuenca por año (MMm³/d promedio)
 
@@ -35,3 +35,7 @@
 ## Operadoras con declaración atrasada
 
 - VELITEC S.A.: 136 pozos activos sin el último mes; se sostiene su última tasa
+
+## Notas
+
+- 2026-09 descartado: falta declarar 100% de la producción

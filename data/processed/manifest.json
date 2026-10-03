@@ -160,7 +160,7 @@
       "name": "Producción de Pozos de Gas y Petróleo - 2025",
       "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/6f9f63bd-3f7e-43ab-8743-85997ae1380c/download/produccin-de-pozos-de-gas-y-petrleo-2025.csv",
       "resource_id": "6f9f63bd-3f7e-43ab-8743-85997ae1380c",
-      "last_modified": "2026-10-01T08:02:56.325160",
+      "last_modified": "2026-10-03T08:03:04.960683",
       "rows": 37484
     },
     {
@@ -168,44 +168,44 @@
       "name": "Producción de Pozos de Gas y Petróleo – 2026",
       "url": "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/fb7a47a0-cba9-4667-a004-6f6c1c346c23/download/produccin-de-pozos-de-gas-y-petrleo-2026.csv",
       "resource_id": "fb7a47a0-cba9-4667-a004-6f6c1c346c23",
-      "last_modified": "2026-10-01T10:02:03.874866",
-      "rows": 22848
+      "last_modified": "2026-10-03T10:01:58.126224",
+      "rows": 22872
     }
   ],
   "outputs": [
     {
       "path": "public/data/blocks.json",
       "bytes": 39959,
-      "sha256": "8140eec60b768ab395884c723db64417f4034a5cab4a66c293850a10cb007ed3"
+      "sha256": "46d81677eeb2701fc520a2bf0ae19d0b23a2d9ec122bfff330044c702a815e89"
     },
     {
       "path": "public/data/concesiones_austral.json",
       "bytes": 55574,
-      "sha256": "47d6741a5d66fc525d544fbe9ab736c2ed373abafc2c1dc6ae837397badd236a"
+      "sha256": "3938476fb170bc72918b2e369b4385d8f67961b359ae17edf5836e2bf9db69b1"
     },
     {
       "path": "public/data/contexto.json",
       "bytes": 187065,
-      "sha256": "cc178885c051b2dce75577a26798d639973f06c24039da3978c3135ef3fc63be"
+      "sha256": "a0cac74602e62f008ec0fec25dfd17512f6e46b0eafbc0d0e4ba60c169cf609a"
     },
     {
       "path": "public/data/wells.json",
-      "bytes": 2223570,
-      "sha256": "bfda4de8c3e832f3b0ad0c589be9836ab9d4acb527d1aae0061af2c4332638b3"
+      "bytes": 2223571,
+      "sha256": "08debcb510d55cdc43f7f05a7ae028daed41d8afb95e5a3e254473300107758f"
     },
     {
       "path": "public/data/well_series.json",
       "bytes": 3480634,
-      "sha256": "f0b76446bbb798a7cc90921bf657eec2c7300493593f1ac47291fe8e842a8571"
+      "sha256": "e459768487ac94735dbf4b50b89eaf6095ccc39eda7fb4eddcacc10da1629209"
     },
     {
       "path": "public/data/forecast.json",
       "bytes": 573703,
-      "sha256": "d7d088416560e005f0ec62938e9846967dc59f5b3c9cd3f841b694be0940c6c0"
+      "sha256": "5c76c3446d75f8cb9fb9138c7d82e53f3d738df940c0d647049c46725c3469b4"
     },
     {
       "path": "public/data/wells.csv",
-      "bytes": 1072367
+      "bytes": 1072368
     }
   ]
 }

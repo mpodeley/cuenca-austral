@@ -1,7 +1,9 @@
 {
   "status": "pass",
   "issues": [],
-  "notas": [],
+  "notas": [
+    "2026-09 descartado: falta declarar 100% de la producción"
+  ],
   "cobertura": {
     "desde": "2006-01",
     "hasta": "2026-08",
@@ -15,7 +17,7 @@
     "bloques": 65,
     "bloques_con_poligono_oficial": 51,
     "bloques_con_poligono_derivado": 14,
-    "registros_mensuales": 699366
+    "registros_mensuales": 699390
   },
   "declaracion_atrasada": [
     {
